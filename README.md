@@ -85,6 +85,13 @@ preview. Chain them while harvesting:
 ./scripts/publish_shards.sh shards/rpu && ./scripts/prune_shards.sh shards/rpu
 ```
 
+Frequent incremental publishes accumulate small tarballs on the release;
+`./scripts/compact_shards.sh` occasionally merges them back into ~1.8 GB ones
+(client-side — GitHub cannot merge assets server-side). It uploads the merged
+tarball before deleting the originals, so an interruption can only leave
+harmless duplicates, and `published.txt` tracks shard names rather than
+tarball membership, so publish/prune/fetch are unaffected by the regrouping.
+
 ## 2. Train
 
 ```sh
