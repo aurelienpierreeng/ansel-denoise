@@ -72,7 +72,9 @@ def score_tile(norm: np.ndarray, clip_threshold: float = 0.98) -> tuple[float, f
 
 def pick_tiles(
     adu: np.ndarray,
-    norm: np.ndarray,
+    colors4: np.ndarray,
+    black_per_channel: np.ndarray,
+    white: float,
     period: tuple[int, int],
     rng: np.random.Generator,
     tile_size: int = 256,
@@ -82,7 +84,11 @@ def pick_tiles(
     min_texture: float = 1e-4,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Sample CFA-aligned candidate crops, drop clipped/flat ones, keep the
-    most textured. Returns (tiles uint16 (N, ts, ts), offsets int32 (N, 2))."""
+    most textured. Returns (tiles uint16 (N, ts, ts), offsets int32 (N, 2)).
+
+    Normalization happens per candidate crop, never on the full frame: a
+    full-frame float32 copy costs ~400 MB on a 100 MP sensor and was a main
+    contributor to OOM kills when several harvesters decode concurrently."""
     h, w = adu.shape
     ph, pw = period
     if h < tile_size + ph or w < tile_size + pw:
@@ -92,7 +98,11 @@ def pick_tiles(
     for _ in range(n_tiles * candidates_per_tile):
         oy = aligned_offset(rng, h, tile_size, ph)
         ox = aligned_offset(rng, w, tile_size, pw)
-        tile_norm = norm[oy : oy + tile_size, ox : ox + tile_size]
+        tile_norm = normalize_mosaic(
+            adu[oy : oy + tile_size, ox : ox + tile_size],
+            colors4[oy : oy + tile_size, ox : ox + tile_size],
+            black_per_channel, white,
+        )
         clipped, texture = score_tile(tile_norm)
         if clipped <= max_clipped and texture >= min_texture:
             scored.append((texture, oy, ox))
@@ -182,15 +192,20 @@ def _pack_worker(path: str, rel: str, out_dir: str, tile_size: int, n_tiles: int
     raw.pixls.us deliberately hosts decoder-hostile files, and a libraw
     segfault must cost one ledger entry, not the harvest run."""
     try:
+        # cap the child's address space: a runaway decode should die here (one
+        # 'error' ledger entry) rather than summon the system OOM killer
+        import resource
+        resource.setrlimit(resource.RLIMIT_AS, (4 << 30, 4 << 30))
+
         dec = decode_raw(Path(path))
         if dec is None:
             q.put({"status": "rejected", "reason": "not a 3-color mosaic raw"})
             return
         # per-file rng: deterministic under resume regardless of processing order
         rng = np.random.default_rng((seed, int(hashlib.md5(rel.encode()).hexdigest()[:8], 16)))
-        norm = normalize_mosaic(dec["adu"], dec["colors4"], dec["black_per_channel"], dec["white"])
         tiles, offsets = pick_tiles(
-            dec["adu"], norm, dec["pattern4"].shape, rng, tile_size=tile_size, n_tiles=n_tiles
+            dec["adu"], dec["colors4"], dec["black_per_channel"], dec["white"],
+            dec["pattern4"].shape, rng, tile_size=tile_size, n_tiles=n_tiles
         )
         if len(tiles) == 0:
             q.put({"status": "rejected", "reason": "no usable tiles (clipped or flat)"})

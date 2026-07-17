@@ -18,6 +18,11 @@ MAX_BYTES=$((1800 * 1024 * 1024)) # stay under GitHub's 2 GiB per-asset cap
 
 command -v gh >/dev/null || { echo "gh CLI required" >&2; exit 1; }
 [ -d "$DIR" ] || { echo "no such directory: $DIR" >&2; exit 1; }
+if [ -e "$DIR/.private" ]; then
+    echo "REFUSING to publish: $DIR is marked private (.private marker)." >&2
+    echo "These shards come from a personal library and must never reach the public release." >&2
+    exit 1
+fi
 
 gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1 || gh release create "$TAG" \
     --repo "$REPO" --title "Harvested training shards ($TAG)" --latest=false \

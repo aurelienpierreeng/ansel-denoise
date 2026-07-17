@@ -85,6 +85,15 @@ def _get(url: str) -> bytes:
         return r.read()
 
 
+def _download(url: str, dest: Path) -> None:
+    """Stream to disk in chunks — raws are up to ~150 MB and buffering whole
+    files in RAM added avoidable pressure next to the decoding children."""
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    with urllib.request.urlopen(req, timeout=120) as r, open(dest, "wb") as f:
+        while chunk := r.read(1 << 20):
+            f.write(chunk)
+
+
 def get_json(url: str) -> dict:
     time.sleep(POLITE_DELAY_S)
     return json.loads(_get(url))
@@ -147,7 +156,7 @@ def crawl_topic(topic: dict, forum: str, out_dir: Path, args: argparse.Namespace
         tmp.parent.mkdir(exist_ok=True)
         try:
             time.sleep(POLITE_DELAY_S)
-            tmp.write_bytes(_get(url))
+            _download(url, tmp)
         except Exception as e:
             records.append({**record, "status": "error", "reason": f"download failed: {e!r}"[:300]})
             continue

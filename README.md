@@ -63,10 +63,25 @@ python3.12 -m ansel_denoise.crawl_playraw --out shards/playraw
 ```
 
 The crawler walks the category via Discourse's JSON API, verifies each
-topic's declared license (default: CC0 and CC-BY only; PlayRaw's customary
-license is CC-BY-SA, opt in with `--licenses cc0,by,by-sa`), applies the same
-ISO gate and tile pipeline, and records topic URL + author + license in the
-ledger and shards for attribution.
+topic's declared license (all CC tags accepted by default — the category
+rules require CC licensing to post; restrict with `--licenses cc0,by`),
+applies the same ISO gate and tile pipeline, and records topic URL + author +
+license in the ledger and shards for attribution.
+
+Finally, your own Ansel library can contribute a **curated** set: select
+images in the lighttable, note their IDs, and harvest them by ID — the ID
+list is the curation, since tiles are viewable fragments of the photographs:
+
+```sh
+python3.12 -m ansel_denoise.harvest_library --ids 65345,65350-65360 --out shards/library
+```
+
+Paths and metadata resolve through `~/.config/ansel/library.db` (opened
+read-only); the ISO gate uses the library's own EXIF data. By default the
+output is publishable like any other source; pass `--private` to mark the
+directory with a `.private` file instead, which `publish_shards.sh`
+hard-refuses to upload — that mode is for personal training data that must
+never reach the public release.
 
 Each source file yields one compressed `.npz` shard (~1–4 MB): up to 16
 CFA-aligned 256×256 uint16 tiles (clipped/flat crops rejected, most textured

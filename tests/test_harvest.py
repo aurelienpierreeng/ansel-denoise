@@ -48,7 +48,8 @@ def test_pick_tiles_alignment_and_rejection():
         colors4 = colors_map(pattern, *adu.shape)
         norm = normalize_mosaic(adu, colors4, np.full(4, black, np.float32), white)
         rng = np.random.default_rng(1)
-        tiles, offsets = pick_tiles(adu, norm, pattern.shape, rng, tile_size=256, n_tiles=8)
+        tiles, offsets = pick_tiles(adu, colors4, np.full(4, black, np.float32), white,
+                                    pattern.shape, rng, tile_size=256, n_tiles=8)
         assert 0 < len(tiles) <= 8
         assert tiles.dtype == np.uint16 and tiles.shape[1:] == (256, 256)
         ph, pw = pattern.shape
@@ -61,7 +62,9 @@ def test_pick_tiles_alignment_and_rejection():
 
 def test_pick_tiles_too_small_image():
     adu = np.zeros((100, 100), np.uint16)
-    tiles, offsets = pick_tiles(adu, adu.astype(np.float32), (2, 2), np.random.default_rng(0))
+    colors4 = colors_map(BAYER_RGGB, 100, 100)
+    tiles, offsets = pick_tiles(adu, colors4, np.zeros(4, np.float32), 1.0, (2, 2),
+                                np.random.default_rng(0))
     assert len(tiles) == 0 and len(offsets) == 0
 
 
