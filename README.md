@@ -66,13 +66,24 @@ has to repeat the multi-day harvest (the git history itself stays lean):
 
 ```sh
 ./scripts/publish_shards.sh shards/rpu       # incremental, resumable, safe mid-harvest
-./scripts/fetch_shards.sh shards/rpu         # fast path on a fresh training box
+./scripts/prune_shards.sh shards/rpu         # free local disk: delete published shards
+./scripts/fetch_shards.sh shards/rpu         # restore / fast path on a fresh training box
 ```
 
 `publish_shards.sh` packs only not-yet-published shards into ≤1.8 GB tarballs
 (GitHub caps assets at 2 GiB) under the `shards-v1` release, and keeps a
 `published.txt` index plus the latest `ledger.jsonl` alongside them. Re-run it
 whenever the harvest has progressed.
+
+`prune_shards.sh` is the local `git annex drop` equivalent for a disk-tight
+machine: it deletes only shards whose names are on the release's
+`published.txt` (updated strictly after each successful upload), never touches
+`ledger.jsonl` (the harvester's resume state), and supports `DRY_RUN=1` to
+preview. Chain them while harvesting:
+
+```sh
+./scripts/publish_shards.sh shards/rpu && ./scripts/prune_shards.sh shards/rpu
+```
 
 ## 2. Train
 
