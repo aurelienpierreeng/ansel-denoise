@@ -74,11 +74,16 @@ class RawTileDataset(Dataset):
     def __getitem__(self, i: int) -> tuple[torch.Tensor, torch.Tensor]:
         shard_path, t = self.index[i]
         shard = _open_shard(shard_path)
-        # deterministic per (epochless) access counter is pointless here; seed
-        # per item index + torch worker for reproducible-but-diverse draws
-        info = torch.utils.data.get_worker_info()
-        wid = info.id if info else 0
-        rng = np.random.default_rng((self.seed, wid, i, np.random.SeedSequence().entropy % (2**32)))
+        if self.split == "val":
+            # fully deterministic: crop, flips, profile draw and noise are
+            # fixed per index, so val PSNR is comparable across steps and runs
+            rng = np.random.default_rng((self.seed, i))
+        else:
+            info = torch.utils.data.get_worker_info()
+            wid = info.id if info else 0
+            rng = np.random.default_rng(
+                (self.seed, wid, i, np.random.SeedSequence().entropy % (2**32))
+            )
 
         tile = shard["tiles"][t]
         oy, ox = (int(v) for v in shard["offsets"][t])

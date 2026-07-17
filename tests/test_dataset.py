@@ -1,0 +1,63 @@
+"""Dataset behaviour that the training metrics depend on."""
+
+import numpy as np
+import pytest
+
+torch = pytest.importorskip("torch")
+
+from ansel_denoise.cfa import XTRANS, BAYER_RGGB
+from ansel_denoise.dataset import RawTileDataset, camera_split
+
+
+def _write_shard(path, pattern, camera):
+    rng = np.random.default_rng(0)
+    yy, xx = np.mgrid[0:600, 0:600]
+    sig = 0.3 + 0.25 * np.sin(xx / 13.0) * np.cos(yy / 19.0)
+    adu = (np.clip(sig, 0, 1) * 15000 + 512).astype(np.uint16)
+    np.savez_compressed(
+        path,
+        tiles=np.stack([adu[i * 60 : i * 60 + 256, i * 60 : i * 60 + 256] for i in range(4)]),
+        offsets=np.array([[i * 60, i * 60] for i in range(4)], dtype=np.int32),
+        pattern=pattern, pattern4=pattern,
+        black_per_channel=np.full(4, 512, np.float32), white=np.float32(15512),
+        wb=np.ones(4, np.float32), iso=np.int32(100),
+        camera=np.str_(camera), source_path=np.str_("synthetic"), annex_key=np.str_(""),
+    )
+
+
+@pytest.fixture
+def shard_dir(tmp_path):
+    # camera names hand-picked so one lands in 'train' and one in 'val'
+    train_cam = next(f"Cam {i}" for i in range(100) if camera_split(f"Cam {i}") == "train")
+    val_cam = next(f"Cam {i}" for i in range(100) if camera_split(f"Cam {i}") == "val")
+    _write_shard(tmp_path / "a.npz", BAYER_RGGB, train_cam)
+    _write_shard(tmp_path / "b.npz", XTRANS, val_cam)
+    return tmp_path
+
+
+def test_shapes_and_channels(shard_dir):
+    ds = RawTileDataset(shard_dir, "train", patch=96)
+    x, y = ds[0]
+    assert x.shape == (5, 96, 96) and y.shape == (1, 96, 96)
+    assert (x[1:4].sum(dim=0) == 1).all()  # one-hot CFA planes
+    assert (x[4] > 0).all()  # sigma map strictly positive
+    assert torch.isfinite(x).all() and torch.isfinite(y).all()
+
+
+def test_val_is_deterministic_train_is_not(shard_dir):
+    val = RawTileDataset(shard_dir, "val", patch=96)
+    x1, y1 = val[0]
+    x2, y2 = RawTileDataset(shard_dir, "val", patch=96)[0]
+    assert torch.equal(x1, x2) and torch.equal(y1, y2)
+
+    train = RawTileDataset(shard_dir, "train", patch=96)
+    a, _ = train[0]
+    b, _ = train[0]
+    assert not torch.equal(a, b)  # fresh noise/crop per access
+
+
+def test_split_partitions_cameras(shard_dir):
+    train = RawTileDataset(shard_dir, "train", patch=96)
+    val = RawTileDataset(shard_dir, "val", patch=96)
+    assert len(train) == 4 and len(val) == 4
+    assert {p for p, _ in train.index}.isdisjoint({p for p, _ in val.index})

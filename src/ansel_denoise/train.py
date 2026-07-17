@@ -35,16 +35,19 @@ def psnr(pred: torch.Tensor, target: torch.Tensor) -> float:
 
 
 @torch.no_grad()
-def validate(model, loader, device, max_batches: int = 50) -> float:
+def validate(model, loader, device, max_batches: int = 50) -> tuple[float, float]:
+    """Returns (denoised PSNR, noisy-input PSNR); their gap is the actual gain."""
     model.eval()
-    scores = []
+    scores, baselines = [], []
     for i, (x, y) in enumerate(loader):
         if i >= max_batches:
             break
-        pred = model(x.to(device))
-        scores.append(psnr(pred, y.to(device)))
+        x, y = x.to(device), y.to(device)
+        scores.append(psnr(model(x), y))
+        baselines.append(psnr(x[:, :1], y))
     model.train()
-    return sum(scores) / max(len(scores), 1)
+    n = max(len(scores), 1)
+    return sum(scores) / n, sum(baselines) / n
 
 
 def save_checkpoint(path: Path, model, opt, step: int) -> None:
@@ -138,12 +141,14 @@ def main(argv: list[str] | None = None) -> int:
                     f"  lr {sched.get_last_lr()[0]:.2e}")
                 t0, loss_acc, n_acc = time.time(), 0.0, 0
             if step % args.val_every == 0:
-                say(f"step {step:7d}  val PSNR {validate(model, val_loader, device):.2f} dB")
+                score, base = validate(model, val_loader, device)
+                say(f"step {step:7d}  val PSNR {score:.2f} dB (noisy input: {base:.2f} dB)")
             if step % args.ckpt_every == 0:
                 save_checkpoint(args.out / f"ckpt-{step:08d}.pt", model, opt, step)
 
     save_checkpoint(args.out / "ckpt-final.pt", model, opt, step)
-    say(f"final val PSNR {validate(model, val_loader, device):.2f} dB")
+    score, base = validate(model, val_loader, device)
+    say(f"final val PSNR {score:.2f} dB (noisy input: {base:.2f} dB)")
     log.close()
     return 0
 
