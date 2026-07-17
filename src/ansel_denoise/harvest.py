@@ -220,8 +220,14 @@ def _pack_worker(path: str, rel: str, out_dir: str, tile_size: int, n_tiles: int
 
 
 def run_isolated(target, args: tuple, timeout: int = 300) -> dict:
-    """Run target(*args, queue) in a forked child; survive segfaults/hangs."""
-    ctx = mp.get_context("fork")
+    """Run target(*args, queue) in a disposable child; survive segfaults/hangs.
+
+    Start method is 'spawn', NOT 'fork': libraw is built with OpenMP, and a
+    forked child inheriting the parent's OpenMP runtime state deadlocks in
+    decode (observed: harvest stalled on the file after the first crash).
+    Spawned children re-import the module, so target must be module-level.
+    """
+    ctx = mp.get_context("spawn")
     q = ctx.Queue()
     p = ctx.Process(target=target, args=(*args, q))
     p.start()

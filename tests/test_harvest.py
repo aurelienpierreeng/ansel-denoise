@@ -1,5 +1,8 @@
 """Tests of the pure harvesting logic on synthetic mosaics (no rawpy needed)."""
 
+import os
+import time
+
 import numpy as np
 import pytest
 
@@ -62,29 +65,32 @@ def test_pick_tiles_too_small_image():
     assert len(tiles) == 0 and len(offsets) == 0
 
 
+# module-level targets: run_isolated uses the 'spawn' start method, whose
+# children import this module and unpickle targets by qualified name
+def _crasher(q):
+    os.abort()
+
+
+def _hang(q):
+    time.sleep(60)
+
+
+def _healthy(q):
+    q.put({"status": "harvested", "n_tiles": 3})
+
+
 def test_run_isolated_survives_native_crash():
     # raw.pixls.us hosts decoder-hostile files that segfault libraw; a native
     # crash must become a ledger record, not kill the harvest
-    import os as _os
     from ansel_denoise.harvest import run_isolated
 
-    def crasher(q):
-        _os.abort()
-
-    rec = run_isolated(crasher, (), timeout=30)
+    rec = run_isolated(_crasher, (), timeout=30)
     assert rec["status"] == "error" and "crashed" in rec["reason"]
 
-    def hang(q):
-        import time
-        time.sleep(60)
-
-    rec = run_isolated(hang, (), timeout=1)
+    rec = run_isolated(_hang, (), timeout=2)
     assert rec["status"] == "error" and "hang" in rec["reason"]
 
-    def healthy(q):
-        q.put({"status": "harvested", "n_tiles": 3})
-
-    assert run_isolated(healthy, ())["n_tiles"] == 3
+    assert run_isolated(_healthy, ())["n_tiles"] == 3
 
 
 def test_pack_worker_rejects_garbage_file(tmp_path):
