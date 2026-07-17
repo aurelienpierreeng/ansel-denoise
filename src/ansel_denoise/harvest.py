@@ -22,7 +22,10 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import multiprocessing as mp
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -173,9 +176,68 @@ def list_sources(source: Path, use_annex: bool) -> list[str]:
     )
 
 
-def harvest_one(
-    source: Path, rel: str, out_dir: Path, args: argparse.Namespace, rng: np.random.Generator
-) -> dict:
+def _pack_worker(path: str, rel: str, out_dir: str, tile_size: int, n_tiles: int, seed: int,
+                 iso: int, camera: str, annex_key: str, q) -> None:
+    """Decode + tile-extract + shard-write, run in a DISPOSABLE child process:
+    raw.pixls.us deliberately hosts decoder-hostile files, and a libraw
+    segfault must cost one ledger entry, not the harvest run."""
+    try:
+        dec = decode_raw(Path(path))
+        if dec is None:
+            q.put({"status": "rejected", "reason": "not a 3-color mosaic raw"})
+            return
+        # per-file rng: deterministic under resume regardless of processing order
+        rng = np.random.default_rng((seed, int(hashlib.md5(rel.encode()).hexdigest()[:8], 16)))
+        norm = normalize_mosaic(dec["adu"], dec["colors4"], dec["black_per_channel"], dec["white"])
+        tiles, offsets = pick_tiles(
+            dec["adu"], norm, dec["pattern4"].shape, rng, tile_size=tile_size, n_tiles=n_tiles
+        )
+        if len(tiles) == 0:
+            q.put({"status": "rejected", "reason": "no usable tiles (clipped or flat)"})
+            return
+
+        shard = Path(out_dir) / (rel.replace("/", "_") + ".npz")
+        tmp = shard.with_name(shard.name + ".tmp")
+        with open(tmp, "wb") as f:  # write-then-rename: never leave a truncated shard
+            np.savez_compressed(
+                f,
+                tiles=tiles,
+                offsets=offsets,
+                pattern=normalize_pattern(dec["pattern4"]),
+                pattern4=dec["pattern4"],
+                black_per_channel=dec["black_per_channel"],
+                white=np.float32(dec["white"]),
+                wb=dec["wb"],
+                iso=np.int32(iso),
+                camera=np.str_(camera),
+                source_path=np.str_(rel),
+                annex_key=np.str_(annex_key),
+            )
+        os.replace(tmp, shard)
+        q.put({"status": "harvested", "n_tiles": int(len(tiles)), "shard": shard.name})
+    except Exception as e:  # plain decode errors are data, not crashes
+        q.put({"status": "error", "reason": repr(e)[:300]})
+
+
+def run_isolated(target, args: tuple, timeout: int = 300) -> dict:
+    """Run target(*args, queue) in a forked child; survive segfaults/hangs."""
+    ctx = mp.get_context("fork")
+    q = ctx.Queue()
+    p = ctx.Process(target=target, args=(*args, q))
+    p.start()
+    p.join(timeout)
+    if p.is_alive():
+        p.terminate()
+        p.join(10)
+        return {"status": "error", "reason": f"decoder hang, killed after {timeout}s"}
+    try:
+        return q.get(timeout=5)
+    except Exception:
+        sig = f"signal {-p.exitcode}" if (p.exitcode or 0) < 0 else f"exit code {p.exitcode}"
+        return {"status": "error", "reason": f"decoder crashed ({sig})"}
+
+
+def harvest_one(source: Path, rel: str, out_dir: Path, args: argparse.Namespace) -> dict:
     """Process a single raw file; returns a ledger record."""
     path = source / rel
     record: dict = {"path": rel, "status": "rejected"}
@@ -198,34 +260,12 @@ def harvest_one(
         if iso > args.max_iso:
             return {**record, "reason": f"ISO {iso} > {args.max_iso}"}
 
-        dec = decode_raw(path)
-        if dec is None:
-            return {**record, "reason": "not a 3-color mosaic raw"}
-
-        norm = normalize_mosaic(dec["adu"], dec["colors4"], dec["black_per_channel"], dec["white"])
-        period = dec["pattern4"].shape
-        tiles, offsets = pick_tiles(
-            dec["adu"], norm, period, rng, tile_size=args.tile_size, n_tiles=args.tiles
+        result = run_isolated(
+            _pack_worker,
+            (str(path), rel, str(out_dir), args.tile_size, args.tiles, args.seed,
+             iso, record["camera"], record.get("annex_key") or ""),
         )
-        if len(tiles) == 0:
-            return {**record, "reason": "no usable tiles (clipped or flat)"}
-
-        shard = out_dir / (rel.replace("/", "_") + ".npz")
-        np.savez_compressed(
-            shard,
-            tiles=tiles,
-            offsets=offsets,
-            pattern=normalize_pattern(dec["pattern4"]),
-            pattern4=dec["pattern4"],
-            black_per_channel=dec["black_per_channel"],
-            white=np.float32(dec["white"]),
-            wb=dec["wb"],
-            iso=np.int32(iso),
-            camera=np.str_(record["camera"]),
-            source_path=np.str_(rel),
-            annex_key=np.str_(record.get("annex_key") or ""),
-        )
-        return {**record, "status": "harvested", "n_tiles": int(len(tiles)), "shard": shard.name}
+        return {**record, **result}
     finally:
         if args.annex:
             dropped = annex(source, "drop", "--quiet", rel)
@@ -260,12 +300,11 @@ def main(argv: list[str] | None = None) -> int:
         sources = sources[: args.limit]
     print(f"{len(sources)} files to process ({len(done)} already in ledger)")
 
-    rng = np.random.default_rng(args.seed)
     n_ok = 0
     with open(ledger_path, "a") as ledger:
         for i, rel in enumerate(sources):
             try:
-                record = harvest_one(args.source, rel, args.out, args, rng)
+                record = harvest_one(args.source, rel, args.out, args)
             except KeyboardInterrupt:
                 raise
             except Exception as e:  # a bad file must never kill a week-long run

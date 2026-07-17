@@ -1,6 +1,7 @@
 """Tests of the pure harvesting logic on synthetic mosaics (no rawpy needed)."""
 
 import numpy as np
+import pytest
 
 from ansel_denoise.cfa import XTRANS, BAYER_RGGB, colors_map
 from ansel_denoise.harvest import normalize_mosaic, pick_tiles, score_tile
@@ -59,3 +60,40 @@ def test_pick_tiles_too_small_image():
     adu = np.zeros((100, 100), np.uint16)
     tiles, offsets = pick_tiles(adu, adu.astype(np.float32), (2, 2), np.random.default_rng(0))
     assert len(tiles) == 0 and len(offsets) == 0
+
+
+def test_run_isolated_survives_native_crash():
+    # raw.pixls.us hosts decoder-hostile files that segfault libraw; a native
+    # crash must become a ledger record, not kill the harvest
+    import os as _os
+    from ansel_denoise.harvest import run_isolated
+
+    def crasher(q):
+        _os.abort()
+
+    rec = run_isolated(crasher, (), timeout=30)
+    assert rec["status"] == "error" and "crashed" in rec["reason"]
+
+    def hang(q):
+        import time
+        time.sleep(60)
+
+    rec = run_isolated(hang, (), timeout=1)
+    assert rec["status"] == "error" and "hang" in rec["reason"]
+
+    def healthy(q):
+        q.put({"status": "harvested", "n_tiles": 3})
+
+    assert run_isolated(healthy, ())["n_tiles"] == 3
+
+
+def test_pack_worker_rejects_garbage_file(tmp_path):
+    pytest.importorskip("rawpy")
+    from ansel_denoise.harvest import _pack_worker, run_isolated
+
+    bad = tmp_path / "garbage.nef"
+    bad.write_bytes(b"\x00\x01this is not a raw file" * 100)
+    rec = run_isolated(_pack_worker, (str(bad), "x/garbage.nef", str(tmp_path), 256, 4, 0,
+                                      100, "Fake Cam", ""))
+    assert rec["status"] == "rejected"
+    assert not list(tmp_path.glob("*.npz"))  # nothing half-written
