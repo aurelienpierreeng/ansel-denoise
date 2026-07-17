@@ -91,7 +91,7 @@ def main(argv: list[str] | None = None) -> int:
         val_set = RawTileDataset(args.shards, "val", patch=args.patch)
     except ValueError:
         say("warning: no held-out-camera tiles; validating on training cameras")
-        val_set = train_set
+        val_set = RawTileDataset(args.shards, "train", patch=args.patch, deterministic=True)
     say(f"tiles: {len(train_set)} train / {len(val_set)} val | device: {device}")
 
     train_loader = DataLoader(
@@ -111,9 +111,17 @@ def main(argv: list[str] | None = None) -> int:
         model.load_state_dict(ckpt["model"])
         opt.load_state_dict(ckpt["opt"])
         step = ckpt["step"]
-        for _ in range(step):
-            sched.step()
+        import warnings
+        with warnings.catch_warnings():
+            # fast-forwarding the scheduler necessarily steps it before any
+            # optimizer.step() of this process; the pytorch warning is moot
+            warnings.simplefilter("ignore", UserWarning)
+            for _ in range(step):
+                sched.step()
         say(f"resumed from {args.resume} at step {step}")
+        if step >= args.steps:
+            say(f"nothing to train: resumed step {step} >= --steps {args.steps} "
+                f"(pass a higher --steps to continue this run)")
 
     say(f"model: {json.dumps(model.cfg)} ({count_params(model) / 1e6:.2f}M params)")
 
@@ -146,6 +154,9 @@ def main(argv: list[str] | None = None) -> int:
             if step % args.ckpt_every == 0:
                 save_checkpoint(args.out / f"ckpt-{step:08d}.pt", model, opt, step)
 
+    # numbered checkpoint is the resume anchor (strictly increasing names);
+    # ckpt-final.pt is a stable alias for the export step
+    save_checkpoint(args.out / f"ckpt-{step:08d}.pt", model, opt, step)
     save_checkpoint(args.out / "ckpt-final.pt", model, opt, step)
     score, base = validate(model, val_loader, device)
     say(f"final val PSNR {score:.2f} dB (noisy input: {base:.2f} dB)")

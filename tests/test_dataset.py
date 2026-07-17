@@ -55,6 +55,11 @@ def test_val_is_deterministic_train_is_not(shard_dir):
     b, _ = train[0]
     assert not torch.equal(a, b)  # fresh noise/crop per access
 
+    # validation fallback: a train-split dataset forced deterministic
+    fb1, _ = RawTileDataset(shard_dir, "train", patch=96, deterministic=True)[0]
+    fb2, _ = RawTileDataset(shard_dir, "train", patch=96, deterministic=True)[0]
+    assert torch.equal(fb1, fb2)
+
 
 def test_split_partitions_cameras(shard_dir):
     train = RawTileDataset(shard_dir, "train", patch=96)

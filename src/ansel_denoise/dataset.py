@@ -53,9 +53,14 @@ class RawTileDataset(Dataset):
         sampler: ProfileSampler | None = None,
         exposure_push_ev: float = 5.0,
         seed: int = 0,
+        deterministic: bool | None = None,
     ):
         self.patch = patch
         self.split = split
+        # val items are frozen (crop, flips, profile, noise) so metrics are
+        # comparable across steps and runs; override for a train-split dataset
+        # used as validation fallback
+        self.deterministic = (split == "val") if deterministic is None else deterministic
         self.sampler = sampler or ProfileSampler()
         self.exposure_push_ev = exposure_push_ev
         self.seed = seed
@@ -74,9 +79,7 @@ class RawTileDataset(Dataset):
     def __getitem__(self, i: int) -> tuple[torch.Tensor, torch.Tensor]:
         shard_path, t = self.index[i]
         shard = _open_shard(shard_path)
-        if self.split == "val":
-            # fully deterministic: crop, flips, profile draw and noise are
-            # fixed per index, so val PSNR is comparable across steps and runs
+        if self.deterministic:
             rng = np.random.default_rng((self.seed, i))
         else:
             info = torch.utils.data.get_worker_info()
