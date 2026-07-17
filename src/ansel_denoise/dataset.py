@@ -5,6 +5,14 @@ fresh (camera, ISO) draw per patch — the shards only store clean tiles. The
 train/val split is by *camera* (hash of the camera string), never by image, so
 validation measures cross-sensor generalization.
 
+Tile storage: on first use the compressed shards are consolidated into one
+flat memory-mapped file next to them (.tiles-cache.bin/.json). Random tile
+sampling then costs a page-cache read instead of an npz decompression — an
+LRU of decompressed shards stops scaling around a few hundred shards (observed
+on Colab: 178 -> 78 patches/s), while the OS page cache handles the full
+~2000-shard harvest (~4 GB) shared across dataloader workers. The cache is
+fingerprinted against the shard listing and rebuilt when shards change.
+
 Sample tensors (float32):
     input  (5, H, W): [noisy mosaic, R one-hot, G one-hot, B one-hot, sigma map]
     target (1, H, W): clean mosaic
@@ -13,7 +21,7 @@ Sample tensors (float32):
 from __future__ import annotations
 
 import hashlib
-from functools import lru_cache
+import json
 from pathlib import Path
 
 import numpy as np
@@ -36,15 +44,57 @@ def camera_split(camera: str, val_buckets: int = 10) -> str:
     return "val" if h % val_buckets == 0 else "train"
 
 
-# Sized for a few hundred shards per worker (~2-6 MB decompressed each). When
-# the cache is smaller than the shard set, random tile sampling thrashes it
-# and every access pays a full npz decompression (observed: 178 -> 78
-# patches/s on Colab when the harvest crossed 64 shards). Past ~1000 shards
-# this needs a locality-aware sampler instead of a bigger cache.
-@lru_cache(maxsize=256)
-def _open_shard(path: str) -> dict:
-    with np.load(path) as z:
-        return {k: z[k] for k in z.files}
+def _fingerprint(shards: list[Path]) -> str:
+    h = hashlib.sha1()
+    for s in shards:
+        st = s.stat()
+        h.update(f"{s.name}:{st.st_size}:{st.st_mtime_ns}\n".encode())
+    return h.hexdigest()
+
+
+def consolidate_tiles(shard_dir: Path) -> tuple[Path, int, list[dict]]:
+    """Merge all shards into a flat uint16 tile file + per-tile records.
+    Returns (bin path, tile size, records); reuses the existing cache when the
+    shard listing is unchanged."""
+    shard_dir = Path(shard_dir)
+    shards = sorted(shard_dir.glob("*.npz"))
+    if not shards:
+        raise ValueError(f"no shards under {shard_dir}")
+    bin_path = shard_dir / ".tiles-cache.bin"
+    meta_path = shard_dir / ".tiles-cache.json"
+    fp = _fingerprint(shards)
+
+    if meta_path.exists():
+        meta = json.loads(meta_path.read_text())
+        if meta.get("fingerprint") == fp and bin_path.exists():
+            return bin_path, meta["tile_size"], meta["records"]
+
+    records: list[dict] = []
+    tile_size = None
+    with open(bin_path, "wb") as out:
+        for shard in shards:
+            with np.load(shard) as z:
+                tiles = z["tiles"]
+                if tiles.shape[0] == 0:
+                    continue
+                if tile_size is None:
+                    tile_size = int(tiles.shape[1])
+                if tiles.shape[1] != tile_size or tiles.shape[2] != tile_size:
+                    raise ValueError(f"{shard.name}: tile size {tiles.shape[1:]} != {tile_size}")
+                base = {
+                    "camera": str(z["camera"]),
+                    "pattern": z["pattern"].tolist(),
+                    "black": np.asarray(z["black_per_channel"][:3], dtype=float).tolist(),
+                    "white": float(z["white"]),
+                }
+                for t in range(tiles.shape[0]):
+                    oy, ox = (int(v) for v in z["offsets"][t])
+                    records.append({**base, "oy": oy, "ox": ox})
+                out.write(np.ascontiguousarray(tiles, dtype=np.uint16).tobytes())
+    meta_path.write_text(json.dumps(
+        {"fingerprint": fp, "tile_size": tile_size, "count": len(records), "records": records}
+    ))
+    return bin_path, tile_size, records
 
 
 class RawTileDataset(Dataset):
@@ -69,21 +119,26 @@ class RawTileDataset(Dataset):
         self.sampler = sampler or ProfileSampler()
         self.exposure_push_ev = exposure_push_ev
         self.seed = seed
-        self.index: list[tuple[str, int]] = []  # (shard path, tile index)
-        for shard in sorted(Path(shard_dir).glob("*.npz")):
-            with np.load(shard) as z:
-                if camera_split(str(z["camera"])) != split:
-                    continue
-                self.index.extend((str(shard), t) for t in range(z["tiles"].shape[0]))
+
+        self.tiles_path, self.tile_size, self.records = consolidate_tiles(Path(shard_dir))
+        self.index = [i for i, r in enumerate(self.records) if camera_split(r["camera"]) == split]
         if not self.index:
             raise ValueError(f"no '{split}' tiles under {shard_dir}")
+        self._tiles: np.memmap | None = None  # opened lazily, once per worker process
+
+    def _tile(self, record_idx: int) -> np.ndarray:
+        if self._tiles is None:
+            ts = self.tile_size
+            self._tiles = np.memmap(self.tiles_path, dtype=np.uint16, mode="r",
+                                    shape=(len(self.records), ts, ts))
+        return self._tiles[record_idx]
 
     def __len__(self) -> int:
         return len(self.index)
 
     def __getitem__(self, i: int) -> tuple[torch.Tensor, torch.Tensor]:
-        shard_path, t = self.index[i]
-        shard = _open_shard(shard_path)
+        rec = self.records[self.index[i]]
+        tile = self._tile(self.index[i])
         if self.deterministic:
             rng = np.random.default_rng((self.seed, i))
         else:
@@ -93,22 +148,21 @@ class RawTileDataset(Dataset):
                 (self.seed, wid, i, np.random.SeedSequence().entropy % (2**32))
             )
 
-        tile = shard["tiles"][t]
-        oy, ox = (int(v) for v in shard["offsets"][t])
-        pattern = shard["pattern"]  # phase-correct for the visible area
+        pattern = np.asarray(rec["pattern"], dtype=np.uint8)  # phase-correct
         ph, pw = pattern.shape
+        black = np.asarray(rec["black"], dtype=np.float32)
 
         # colors for the tile, then crop tile and colors together, CFA-aligned
-        colors = colors_map(pattern, tile.shape[0], tile.shape[1], oy, ox)
+        colors = colors_map(pattern, tile.shape[0], tile.shape[1], rec["oy"], rec["ox"])
         cy = aligned_offset(rng, tile.shape[0], self.patch, ph)
         cx = aligned_offset(rng, tile.shape[1], self.patch, pw)
-        tile = tile[cy : cy + self.patch, cx : cx + self.patch]
+        tile = np.asarray(tile[cy : cy + self.patch, cx : cx + self.patch])
         colors = colors[cy : cy + self.patch, cx : cx + self.patch]
 
         # normalize like rawprepare; colors4 == colors is fine for black
         # subtraction because per-channel blacks rarely differ between greens,
         # and the mean-black scale matches normalize_mosaic()
-        clean = normalize_mosaic(tile, colors, shard["black_per_channel"][:3], float(shard["white"]))
+        clean = normalize_mosaic(tile, colors, black, rec["white"])
         clean = np.clip(clean, 0.0, 1.0)
 
         # flips are valid augmentation as long as mosaic and colors flip together
@@ -126,7 +180,7 @@ class RawTileDataset(Dataset):
         if rng.random() < CLEAN_FRACTION:
             a = a * 1e-3
             b = b * 1e-3
-        black_frac = float(np.mean(shard["black_per_channel"])) / max(float(shard["white"]), 1.0)
+        black_frac = float(np.mean(black)) / max(rec["white"], 1.0)
         noisy = synthesize(clean, colors, a, b, rng, black_frac=black_frac)
         sigma = sigma_map(noisy, colors, a, b)
 

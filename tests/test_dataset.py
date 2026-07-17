@@ -61,8 +61,26 @@ def test_val_is_deterministic_train_is_not(shard_dir):
     assert torch.equal(fb1, fb2)
 
 
+def test_tile_cache_reuse_and_invalidation(shard_dir):
+    from ansel_denoise.dataset import consolidate_tiles
+
+    bin_path, ts, records = consolidate_tiles(shard_dir)
+    assert bin_path.exists() and ts == 256 and len(records) == 8
+    assert bin_path.stat().st_size == len(records) * ts * ts * 2
+    mtime = bin_path.stat().st_mtime_ns
+
+    _, _, again = consolidate_tiles(shard_dir)  # unchanged shards -> reuse
+    assert bin_path.stat().st_mtime_ns == mtime and len(again) == 8
+
+    _write_shard(shard_dir / "c.npz", BAYER_RGGB, "Cam extra")  # new shard -> rebuild
+    _, _, rebuilt = consolidate_tiles(shard_dir)
+    assert len(rebuilt) == 12 and bin_path.stat().st_mtime_ns != mtime
+
+
 def test_split_partitions_cameras(shard_dir):
     train = RawTileDataset(shard_dir, "train", patch=96)
     val = RawTileDataset(shard_dir, "val", patch=96)
     assert len(train) == 4 and len(val) == 4
-    assert {p for p, _ in train.index}.isdisjoint({p for p, _ in val.index})
+    train_cams = {train.records[i]["camera"] for i in train.index}
+    val_cams = {val.records[i]["camera"] for i in val.index}
+    assert train_cams.isdisjoint(val_cams)
