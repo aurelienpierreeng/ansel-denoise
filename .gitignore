@@ -1,0 +1,16 @@
+# harvested data and training outputs are never committed
+shards/
+runs/
+data.annex/
+data.lfs/
+*.npz
+*.ckpt
+*.onnx
+*.anseldn
+
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+.pytest_cache/

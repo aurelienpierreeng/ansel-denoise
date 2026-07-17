@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ansel-denoise"
+version = "0.1.0"
+description = "Training pipeline for Ansel's neural raw (CFA-domain) denoiser"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+authors = [{ name = "Aurélien Pierre" }]
+dependencies = ["numpy>=1.24"]
+
+[project.optional-dependencies]
+harvest = ["rawpy>=0.19"]
+train = ["torch>=2.1"]
+dev = ["pytest"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
