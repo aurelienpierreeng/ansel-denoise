@@ -20,7 +20,7 @@ normalized raw values):
    sigma map. One set of weights covers every profiled camera, Bayer and
    X-Trans alike; a newly profiled camera is supported with **no retraining**,
    because the sigma map is computed from its profile at runtime.
-4. **Export** the weights to a flat `.anseldn` file loaded by Ansel's C/OpenCL
+4. **Export** the weights to a flat `.anselnn` file loaded by Ansel's C/OpenCL
    inference in the `rawdenoise` IOP.
 
 The network input is `[noisy mosaic, R/G/B one-hot CFA planes, sigma map]`
@@ -144,7 +144,7 @@ hash split), so it reports cross-sensor generalization, not memorization.
 python3.12 -m ansel_denoise.export runs/v1/ckpt-final.pt --onnx runs/v1/check.onnx
 ```
 
-writes `ckpt-final.anseldn`: an 8-byte magic, a JSON header (model config +
+writes `ckpt-final.anselnn`: an 8-byte magic, a JSON header (model config +
 tensor table), and raw float32 blobs — trivially parsed from C. The ONNX twin
 is for numerical cross-checking of the C/OpenCL implementation.
 
@@ -159,7 +159,7 @@ is for numerical cross-checking of the C/OpenCL implementation.
 | `src/ansel_denoise/dataset.py` | shards → noisy/clean training pairs (noise made on the fly) |
 | `src/ansel_denoise/model.py` | CFA-agnostic U-Net (OpenCL-friendly ops only) |
 | `src/ansel_denoise/train.py` | training loop, camera-holdout validation |
-| `src/ansel_denoise/export.py` | `.anseldn` / ONNX export |
+| `src/ansel_denoise/export.py` | `.anselnn` / ONNX export |
 | `data/noiseprofiles.json` | profile DB from upstream darktable (superset of Ansel's); refresh with `scripts/update_noiseprofiles.sh`, source commit pinned in `data/noiseprofiles.upstream` |
 
 ## License

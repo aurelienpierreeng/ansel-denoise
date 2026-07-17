@@ -6,7 +6,7 @@ data.lfs/
 *.npz
 *.ckpt
 *.onnx
-*.anseldn
+*.anselnn
 
 __pycache__/
 *.pyc
@@ -14,4 +14,4 @@ __pycache__/
 build/
 dist/
 .pytest_cache/
-fixtures/*.anseldn
+fixtures/*.anselnn

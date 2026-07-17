@@ -35,5 +35,5 @@ EOF
 python3.12 -m ansel_denoise.train --shards "$OUT/shards" --out "$OUT/run" \
     --steps 30 --batch 2 --patch 96 --depth 3 --base 8 --workers 0 \
     --val-every 30 --ckpt-every 30
-python3.12 -m ansel_denoise.export "$OUT/run/ckpt-final.pt" --out "$OUT/run/final.anseldn"
+python3.12 -m ansel_denoise.export "$OUT/run/ckpt-final.pt" --out "$OUT/run/final.anselnn"
 echo "smoke test OK"

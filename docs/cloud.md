@@ -31,7 +31,7 @@ python3 -m ansel_denoise.train --shards shards/rpu --out runs/v1 \
 
 # 4. bring home only what matters (a few MB)
 python3 -m ansel_denoise.export runs/v1/ckpt-final.pt
-scp box:ansel-denoise/runs/v1/ckpt-final.anseldn .
+scp box:ansel-denoise/runs/v1/ckpt-final.anselnn .
 ```
 
 `--resume runs/v1/ckpt-XXXXXXXX.pt` continues an interrupted run, including on

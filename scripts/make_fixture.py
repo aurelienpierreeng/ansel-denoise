@@ -1,5 +1,5 @@
 #!/usr/bin/env python3.12
-"""Generate the golden parity fixture for Ansel's C inference of an .anseldn model.
+"""Generate the golden parity fixture for Ansel's C inference of an .anselnn model.
 
 Writes, next to --out:
     fixture-input.f32     5 x N x N float32 LE planes [mosaic, R, G, B, sigma]
@@ -11,7 +11,7 @@ noise, RGGB one-hot, sigma from a real-profile-magnitude variance line), so
 the fixture exercises every network path without shipping image data. The C
 selftest must reproduce fixture-expected.f32 within the stated tolerance.
 
-Usage: python3.12 scripts/make_fixture.py model.anseldn --out fixtures/
+Usage: python3.12 scripts/make_fixture.py model.anselnn --out fixtures/
 """
 
 import argparse
@@ -32,7 +32,7 @@ from ansel_denoise.noise import sigma_map, synthesize  # noqa: E402
 N = 96  # multiple of 2**depth and of the CFA period
 
 
-def load_anseldn(path: Path):
+def load_anselnn(path: Path):
     raw = path.read_bytes()
     assert raw[:8] == b"ANSELDN1", "bad magic"
     (hlen,) = struct.unpack("<I", raw[8:12])
@@ -55,7 +55,7 @@ def main() -> int:
     ap.add_argument("--out", type=Path, required=True)
     args = ap.parse_args()
 
-    model, cfg = load_anseldn(args.model)
+    model, cfg = load_anselnn(args.model)
     rng = np.random.default_rng(0xF17)
 
     yy, xx = np.mgrid[0:N, 0:N]

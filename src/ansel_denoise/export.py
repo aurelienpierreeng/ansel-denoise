@@ -1,7 +1,7 @@
 """Export a trained checkpoint to the flat weight format consumed by Ansel's
 rawdenoise IOP (and optionally to ONNX for cross-checking).
 
-.anseldn layout, all little-endian:
+.anselnn layout, all little-endian:
     8 bytes   magic "ANSELDN1"
     4 bytes   uint32 header length N
     N bytes   JSON header: {"cfg": {...model config...},
@@ -33,7 +33,7 @@ def load_model(ckpt_path: Path):
     return model, cfg, ckpt.get("step")
 
 
-def write_anseldn(model, cfg: dict, out: Path) -> int:
+def write_anselnn(model, cfg: dict, out: Path) -> int:
     tensors, blobs, offset = [], [], 0
     for name, t in model.state_dict().items():
         data = t.detach().cpu().to(torch.float32).contiguous().numpy().tobytes()
@@ -53,13 +53,13 @@ def write_anseldn(model, cfg: dict, out: Path) -> int:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("checkpoint", type=Path)
-    ap.add_argument("--out", type=Path, default=None, help="default: checkpoint name + .anseldn")
+    ap.add_argument("--out", type=Path, default=None, help="default: checkpoint name + .anselnn")
     ap.add_argument("--onnx", type=Path, default=None, help="also export ONNX to this path")
     args = ap.parse_args(argv)
 
     model, cfg, step = load_model(args.checkpoint)
-    out = args.out or args.checkpoint.with_suffix(".anseldn")
-    size = write_anseldn(model, cfg, out)
+    out = args.out or args.checkpoint.with_suffix(".anselnn")
+    size = write_anselnn(model, cfg, out)
     print(f"{out} ({size / 1e6:.1f} MB, step {step}, cfg {cfg})")
 
     if args.onnx:
