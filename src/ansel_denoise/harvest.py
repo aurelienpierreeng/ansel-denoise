@@ -159,7 +159,14 @@ def decode_raw(path: Path) -> dict | None:
         # phased on the visible area. Since tile offsets are period-aligned,
         # this block reconstructs every tile's color map exactly.
         return {
-            "adu": np.ascontiguousarray(raw.raw_image_visible),
+            # copy=True is load-bearing: raw_image_visible is a VIEW into
+            # libraw's buffer, freed when this `with` block closes. For files
+            # whose visible area has no sensor margins the view is already
+            # contiguous, so ascontiguousarray would return it uncopied and
+            # every later pixel access would be use-after-free (segfaults on
+            # D850/D810/Z30-class NEFs; margin-carrying files survived by
+            # accident because their non-contiguous views forced a copy).
+            "adu": np.array(raw.raw_image_visible, dtype=np.uint16, copy=True),
             "colors4": colors4,
             "pattern4": colors4[:ph, :pw].copy(),
             "black_per_channel": np.asarray(raw.black_level_per_channel, dtype=np.float32),
@@ -307,6 +314,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--include", default="", help="only paths containing this substring")
     ap.add_argument("--limit", type=int, default=0, help="stop after N processed files (0 = all)")
     ap.add_argument("--seed", type=int, default=0xA45E1)
+    ap.add_argument("--retry-errors", action="store_true",
+                    help="reprocess files previously ledgered as status=error "
+                         "(use after a decoder fix; rejected/harvested files stay skipped)")
     args = ap.parse_args(argv)
 
     args.out.mkdir(parents=True, exist_ok=True)
@@ -314,7 +324,13 @@ def main(argv: list[str] | None = None) -> int:
     done = set()
     if ledger_path.exists():
         with open(ledger_path) as f:
-            done = {json.loads(line)["path"] for line in f if line.strip()}
+            for line in f:
+                if not line.strip():
+                    continue
+                r = json.loads(line)
+                if args.retry_errors and r["status"] == "error":
+                    continue
+                done.add(r["path"])
 
     sources = [s for s in list_sources(args.source, args.annex) if args.include in s and s not in done]
     if args.limit:

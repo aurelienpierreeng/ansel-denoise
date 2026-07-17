@@ -201,6 +201,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--tile-size", type=int, default=256)
     ap.add_argument("--limit", type=int, default=0, help="stop after N topics (0 = all)")
     ap.add_argument("--seed", type=int, default=0xA45E1)
+    ap.add_argument("--retry-errors", action="store_true",
+                    help="reprocess topics whose ledger entries are all status=error "
+                         "(use after a decoder fix)")
     args = ap.parse_args(argv)
 
     allowed = {t.strip() for t in args.licenses.split(",") if t.strip()}
@@ -209,8 +212,14 @@ def main(argv: list[str] | None = None) -> int:
     done = set()
     if ledger_path.exists():
         with open(ledger_path, encoding="utf-8") as f:
-            done = {json.loads(line)["path"] for line in f if line.strip()}
-    # a whole topic is done when any of its paths are ledgered
+            for line in f:
+                if not line.strip():
+                    continue
+                r = json.loads(line)
+                if args.retry_errors and r["status"] == "error":
+                    continue
+                done.add(r["path"])
+    # a whole topic is done when any of its (non-retried) paths are ledgered
     done_topics = {p.split("/")[1] for p in done if p.startswith("playraw/")}
 
     cid = resolve_category(args.forum, args.category)
