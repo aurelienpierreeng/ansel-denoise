@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import time
 from pathlib import Path
 
@@ -50,9 +51,11 @@ def validate(model, loader, device, max_batches: int = 50) -> tuple[float, float
     return sum(scores) / n, sum(baselines) / n
 
 
-def save_checkpoint(path: Path, model, opt, step: int) -> None:
+def save_checkpoint(path: Path, model, opt, step: int, best_psnr: float = float("-inf"),
+                    stale_vals: int = 0) -> None:
     torch.save(
-        {"cfg": model.cfg, "model": model.state_dict(), "opt": opt.state_dict(), "step": step},
+        {"cfg": model.cfg, "model": model.state_dict(), "opt": opt.state_dict(), "step": step,
+         "best_psnr": best_psnr, "stale_vals": stale_vals},
         path,
     )
 
@@ -83,6 +86,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--resume", type=Path, default=None)
     ap.add_argument("--keep-ckpts", type=int, default=3,
                     help="numbered checkpoints to keep, oldest deleted first (0 = keep all)")
+    ap.add_argument("--patience", type=int, default=0,
+                    help="stop after N validations without a +0.05 dB val-PSNR improvement, "
+                         "counted across resumed sessions (0 = never stop early)")
     args = ap.parse_args(argv)
 
     device = pick_device(args.device)
@@ -116,12 +122,16 @@ def main(argv: list[str] | None = None) -> int:
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=args.steps)
     scaler = torch.amp.GradScaler(enabled=device.type == "cuda")
     step = 0
+    best_psnr = float("-inf")
+    stale_vals = 0
 
     if args.resume:
         ckpt = torch.load(args.resume, map_location=device)
         model.load_state_dict(ckpt["model"])
         opt.load_state_dict(ckpt["opt"])
         step = ckpt["step"]
+        best_psnr = ckpt.get("best_psnr", float("-inf"))
+        stale_vals = ckpt.get("stale_vals", 0)
         # The checkpointed optimizer carries the PREVIOUS schedule's last lr —
         # 0.0 if that run completed its cosine. CosineAnnealingLR.step() is a
         # recursive multiplicative formula on the current lr, so fast-forwarding
@@ -145,7 +155,8 @@ def main(argv: list[str] | None = None) -> int:
 
     model.train()
     t0, loss_acc, n_acc = time.time(), 0.0, 0
-    while step < args.steps:
+    stalled = False
+    while step < args.steps and not stalled:
         for x, y in train_loader:
             if step >= args.steps:
                 break
@@ -158,25 +169,53 @@ def main(argv: list[str] | None = None) -> int:
             scaler.update()
             sched.step()
             step += 1
-            loss_acc += loss.item()
+            li = loss.item()
+            loss_acc += li
             n_acc += 1
+
+            # broken-run invariants: abort loudly, do NOT checkpoint over good
+            # state. Train-loss "stagnation" is deliberately not gated — a flat
+            # L1 plateau is what healthy denoiser training looks like; only the
+            # deterministic val metric below can diagnose real stagnation.
+            if not math.isfinite(li):
+                say(f"ABORT at step {step}: non-finite loss {li} — weights are corrupted, "
+                    f"resume from the last checkpoint with a lower --lr")
+                log.close()
+                return 1
+            lr_now = sched.get_last_lr()[0]
+            if lr_now == 0.0 and step < args.steps:
+                say(f"ABORT at step {step}: lr is 0 with {args.steps - step} steps remaining — "
+                    f"schedule/resume bug, this run would burn compute without learning")
+                log.close()
+                return 1
 
             if step % 100 == 0:
                 rate = n_acc * args.batch / (time.time() - t0)
                 say(f"step {step:7d}  loss {loss_acc / n_acc:.5f}  {rate:.1f} patches/s"
-                    f"  lr {sched.get_last_lr()[0]:.2e}")
+                    f"  lr {lr_now:.2e}")
                 t0, loss_acc, n_acc = time.time(), 0.0, 0
             if step % args.val_every == 0:
                 score, base = validate(model, val_loader, device)
-                say(f"step {step:7d}  val PSNR {score:.2f} dB (noisy input: {base:.2f} dB)")
+                if score > best_psnr + 0.05:
+                    best_psnr, stale_vals = score, 0
+                    save_checkpoint(args.out / "ckpt-best.pt", model, opt, step, best_psnr, stale_vals)
+                else:
+                    stale_vals += 1
+                say(f"step {step:7d}  val PSNR {score:.2f} dB (noisy input: {base:.2f} dB, "
+                    f"best {best_psnr:.2f}, stale {stale_vals})")
+                if args.patience and stale_vals >= args.patience:
+                    say(f"early stop at step {step}: {stale_vals} validations without improvement "
+                        f"(best {best_psnr:.2f} dB, kept in ckpt-best.pt)")
+                    stalled = True
+                    break
             if step % args.ckpt_every == 0:
-                save_checkpoint(args.out / f"ckpt-{step:08d}.pt", model, opt, step)
+                save_checkpoint(args.out / f"ckpt-{step:08d}.pt", model, opt, step, best_psnr, stale_vals)
                 rotate_checkpoints(args.out, args.keep_ckpts)
 
     # numbered checkpoint is the resume anchor (strictly increasing names);
     # ckpt-final.pt is a stable alias for the export step
-    save_checkpoint(args.out / f"ckpt-{step:08d}.pt", model, opt, step)
-    save_checkpoint(args.out / "ckpt-final.pt", model, opt, step)
+    save_checkpoint(args.out / f"ckpt-{step:08d}.pt", model, opt, step, best_psnr, stale_vals)
+    save_checkpoint(args.out / "ckpt-final.pt", model, opt, step, best_psnr, stale_vals)
     rotate_checkpoints(args.out, args.keep_ckpts)
     score, base = validate(model, val_loader, device)
     say(f"final val PSNR {score:.2f} dB (noisy input: {base:.2f} dB)")
