@@ -89,6 +89,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--patience", type=int, default=0,
                     help="stop after N validations without a +0.05 dB val-PSNR improvement, "
                          "counted across resumed sessions (0 = never stop early)")
+    ap.add_argument("--schedule", choices=["cosine", "constant"], default="cosine",
+                    help="cosine: one-shot run annealing to 0 at --steps. constant: for "
+                         "incremental sessions with a moving --steps target — a cosine pinned "
+                         "to an ever-receding target keeps every later session in its dying "
+                         "tail; anneal deliberately in a final cosine run instead")
     args = ap.parse_args(argv)
 
     device = pick_device(args.device)
@@ -119,7 +124,10 @@ def main(argv: list[str] | None = None) -> int:
 
     model = build_model(base=args.base, depth=args.depth).to(device)
     opt = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-8)
-    sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=args.steps)
+    if args.schedule == "cosine":
+        sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=args.steps)
+    else:
+        sched = torch.optim.lr_scheduler.LambdaLR(opt, lambda _: 1.0)
     scaler = torch.amp.GradScaler(enabled=device.type == "cuda")
     step = 0
     best_psnr = float("-inf")
