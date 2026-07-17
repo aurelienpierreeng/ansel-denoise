@@ -1,0 +1,72 @@
+#!/bin/sh
+# Publish harvested shards as GitHub release assets — a permanent public cache
+# of the training set. Incremental and resumable: a published.txt index on the
+# release records what is already up, so re-running after more harvesting (or
+# after an interrupted upload) only packs and uploads the new shards. Safe to
+# run while the harvest is still going.
+#
+# Usage: ./scripts/publish_shards.sh <shard-dir> [release-tag]
+#
+# The canonical provenance remains ledger.jsonl + the annex commit hash; the
+# release spares contributors the multi-day re-harvest, nothing more.
+set -eu
+
+DIR="${1:?usage: publish_shards.sh <shard-dir> [release-tag]}"
+TAG="${2:-shards-v1}"
+REPO="${ANSEL_DENOISE_REPO:-aurelienpierreeng/ansel-denoise}"
+MAX_BYTES=$((1800 * 1024 * 1024)) # stay under GitHub's 2 GiB per-asset cap
+
+command -v gh >/dev/null || { echo "gh CLI required" >&2; exit 1; }
+[ -d "$DIR" ] || { echo "no such directory: $DIR" >&2; exit 1; }
+
+gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1 || gh release create "$TAG" \
+    --repo "$REPO" --title "Harvested training shards ($TAG)" --latest=false \
+    --notes "Clean-tile shards harvested by scripts/harvest_rpu.sh. Cache only: the dataset is reproducible from ledger.jsonl + the raw.pixls.us annex commit. Fetch with scripts/fetch_shards.sh."
+
+WORK=$(mktemp -d)
+trap 'rm -rf "$WORK"' EXIT
+gh release download "$TAG" --repo "$REPO" --pattern published.txt --dir "$WORK" 2>/dev/null || :
+touch "$WORK/published.txt"
+
+# shards present locally but not yet on the release (newline-safe, sorted)
+find "$DIR" -maxdepth 1 -name '*.npz' -printf '%f\n' | sort > "$WORK/local.txt"
+grep -vxF -f "$WORK/published.txt" "$WORK/local.txt" > "$WORK/new.txt" || :
+N_NEW=$(wc -l < "$WORK/new.txt")
+[ "$N_NEW" -gt 0 ] || { echo "nothing new to publish ($(wc -l < "$WORK/published.txt") shards already up)"; exit 0; }
+echo "$N_NEW new shards to publish"
+
+STAMP=$(date -u +%Y%m%d-%H%M%S)
+SEQ=0
+: > "$WORK/batch.txt"
+BATCH_BYTES=0
+
+flush_batch() {
+    [ -s "$WORK/batch.txt" ] || return 0
+    SEQ=$((SEQ + 1))
+    NAME="shards-$STAMP-$(printf '%03d' "$SEQ").tar"
+    echo "packing $NAME ($(wc -l < "$WORK/batch.txt") shards, $((BATCH_BYTES / 1024 / 1024)) MB)"
+    tar cf "$WORK/$NAME" -C "$DIR" --files-from="$WORK/batch.txt"
+    gh release upload "$TAG" "$WORK/$NAME" --repo "$REPO"
+    rm -f "$WORK/$NAME"
+    # commit to the index only after a successful upload -> interruption-safe
+    cat "$WORK/batch.txt" >> "$WORK/published.txt"
+    sort -o "$WORK/published.txt" "$WORK/published.txt"
+    gh release upload "$TAG" "$WORK/published.txt" --repo "$REPO" --clobber
+    : > "$WORK/batch.txt"
+    BATCH_BYTES=0
+}
+
+while IFS= read -r f; do
+    SIZE=$(stat -c %s "$DIR/$f")
+    if [ -s "$WORK/batch.txt" ] && [ $((BATCH_BYTES + SIZE)) -gt "$MAX_BYTES" ]; then
+        flush_batch
+    fi
+    printf '%s\n' "$f" >> "$WORK/batch.txt"
+    BATCH_BYTES=$((BATCH_BYTES + SIZE))
+done < "$WORK/new.txt"
+flush_batch
+
+# keep the latest provenance ledger alongside the data
+[ -f "$DIR/ledger.jsonl" ] && gh release upload "$TAG" "$DIR/ledger.jsonl" --repo "$REPO" --clobber
+
+echo "done: $(wc -l < "$WORK/published.txt") shards published on release '$TAG'"

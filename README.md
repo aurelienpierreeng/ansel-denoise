@@ -61,6 +61,19 @@ git-annex key. `ledger.jsonl` records every decision, making runs resumable
 and the dataset reproducible from the annex commit hash + this repo alone —
 nothing needs redistribution.
 
+Harvested shards are cached permanently as GitHub release assets so nobody
+has to repeat the multi-day harvest (the git history itself stays lean):
+
+```sh
+./scripts/publish_shards.sh shards/rpu       # incremental, resumable, safe mid-harvest
+./scripts/fetch_shards.sh shards/rpu         # fast path on a fresh training box
+```
+
+`publish_shards.sh` packs only not-yet-published shards into ≤1.8 GB tarballs
+(GitHub caps assets at 2 GiB) under the `shards-v1` release, and keeps a
+`published.txt` index plus the latest `ledger.jsonl` alongside them. Re-run it
+whenever the harvest has progressed.
+
 ## 2. Train
 
 ```sh

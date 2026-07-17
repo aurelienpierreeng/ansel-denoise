@@ -21,8 +21,9 @@ git clone https://github.com/aurelienpierreeng/ansel-denoise.git
 cd ansel-denoise
 python3 -m pip install -e .[harvest,train]       # torch wheel matches the box's CUDA
 
-# 2. harvest (resumable; tmux/screen recommended)
-./scripts/harvest_rpu.sh shards/rpu
+# 2. get the data: fetch the published cache (minutes), or re-harvest (days)
+./scripts/fetch_shards.sh shards/rpu         # from the shards-v1 GitHub release
+# ./scripts/harvest_rpu.sh shards/rpu        # full harvest, if cache is stale
 
 # 3. train
 python3 -m ansel_denoise.train --shards shards/rpu --out runs/v1 \
@@ -35,8 +36,9 @@ scp box:ansel-denoise/runs/v1/ckpt-final.anseldn .
 
 `--resume runs/v1/ckpt-XXXXXXXX.pt` continues an interrupted run, including on
 a different machine — checkpoints are self-contained (config + weights +
-optimizer + step). Shards are plain `.npz` files: `rsync` them between boxes
-to avoid re-harvesting, or keep them in object storage.
+optimizer + step). Shards are plain `.npz` files: the GitHub release cache
+(`scripts/publish_shards.sh` / `fetch_shards.sh`) is the canonical way to move
+them between boxes; `rsync`/object storage work too.
 
 ## Reproducibility contract
 
