@@ -54,6 +54,20 @@ or from any local directory of raw files:
 python3.12 -m ansel_denoise.harvest --source ~/photos --out shards/mine --max-iso 200
 ```
 
+or from the [PlayRaw category](https://discuss.pixls.us/c/playraw/30) of
+discuss.pixls.us (~2000 topics of real photographs with declared CC licenses —
+the content-diversity complement to raw.pixls.us's decoder-coverage archive):
+
+```sh
+python3.12 -m ansel_denoise.crawl_playraw --out shards/playraw
+```
+
+The crawler walks the category via Discourse's JSON API, verifies each
+topic's declared license (default: CC0 and CC-BY only; PlayRaw's customary
+license is CC-BY-SA, opt in with `--licenses cc0,by,by-sa`), applies the same
+ISO gate and tile pipeline, and records topic URL + author + license in the
+ledger and shards for attribution.
+
 Each source file yields one compressed `.npz` shard (~1–4 MB): up to 16
 CFA-aligned 256×256 uint16 tiles (clipped/flat crops rejected, most textured
 kept) plus black/white levels, CFA pattern, WB, ISO, camera, source path and
