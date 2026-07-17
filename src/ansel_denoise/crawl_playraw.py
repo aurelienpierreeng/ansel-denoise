@@ -11,9 +11,10 @@ decode -> tile pipeline as the archive harvester. Ledger, shard format and
 resume semantics are identical; provenance (topic URL, author, license) is
 recorded in both the ledger and the shard.
 
-Licenses: only topics declaring CC0 or CC-BY are used by default (attribution
-data is retained). Share-alike and non-commercial variants are excluded
-unless explicitly allowed with --licenses.
+Licenses: the category rules require Creative Commons licensing to post, so
+all topics are accepted by default; each topic's detected license tag, author
+and URL are recorded in the ledger and shards for attribution. Pass
+--licenses cc0,by to restrict to specific tags instead.
 
 Usage:
     python -m ansel_denoise.crawl_playraw --out shards/playraw
@@ -133,7 +134,7 @@ def crawl_topic(topic: dict, forum: str, out_dir: Path, args: argparse.Namespace
     lic = detect_license(post["cooked"])
     base = {"topic": f"{forum}/t/{tid}", "author": post["author"], "license": lic}
 
-    if lic not in allowed:
+    if "all" not in allowed and lic not in allowed:
         return [{**base, "path": f"playraw/{tid}", "status": "rejected",
                  "reason": f"license {lic or 'undeclared'} not in {sorted(allowed)}"}]
 
@@ -182,8 +183,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", type=Path, required=True, help="shard output directory")
     ap.add_argument("--forum", default="https://discuss.pixls.us")
     ap.add_argument("--category", default="playraw", help="Discourse category slug")
-    ap.add_argument("--licenses", default="cc0,by",
-                    help="comma list of accepted license tags (default cc0,by)")
+    ap.add_argument("--licenses", default="all",
+                    help="comma list of accepted license tags, or 'all' (default): the "
+                         "category rules require CC licensing to post, and every topic's "
+                         "detected license is recorded for attribution regardless")
     ap.add_argument("--max-iso", type=int, default=200, help="reject files above this ISO")
     ap.add_argument("--tiles", type=int, default=16, help="max tiles per source file")
     ap.add_argument("--tile-size", type=int, default=256)
