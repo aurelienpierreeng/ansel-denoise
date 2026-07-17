@@ -57,6 +57,15 @@ def save_checkpoint(path: Path, model, opt, step: int) -> None:
     )
 
 
+def rotate_checkpoints(out: Path, keep: int) -> None:
+    """Delete the oldest numbered checkpoints beyond `keep`. A long run at a
+    short --ckpt-every would otherwise fill the checkpoint volume (a free
+    Google Drive dies after ~150 checkpoints of a 7.6M-param model)."""
+    numbered = sorted(out.glob("ckpt-0*.pt"))
+    for stale in numbered[:-keep] if keep > 0 else []:
+        stale.unlink()
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--shards", type=Path, required=True, help="harvested shard directory")
@@ -72,6 +81,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--val-every", type=int, default=2000)
     ap.add_argument("--ckpt-every", type=int, default=10_000)
     ap.add_argument("--resume", type=Path, default=None)
+    ap.add_argument("--keep-ckpts", type=int, default=3,
+                    help="numbered checkpoints to keep, oldest deleted first (0 = keep all)")
     args = ap.parse_args(argv)
 
     device = pick_device(args.device)
@@ -153,11 +164,13 @@ def main(argv: list[str] | None = None) -> int:
                 say(f"step {step:7d}  val PSNR {score:.2f} dB (noisy input: {base:.2f} dB)")
             if step % args.ckpt_every == 0:
                 save_checkpoint(args.out / f"ckpt-{step:08d}.pt", model, opt, step)
+                rotate_checkpoints(args.out, args.keep_ckpts)
 
     # numbered checkpoint is the resume anchor (strictly increasing names);
     # ckpt-final.pt is a stable alias for the export step
     save_checkpoint(args.out / f"ckpt-{step:08d}.pt", model, opt, step)
     save_checkpoint(args.out / "ckpt-final.pt", model, opt, step)
+    rotate_checkpoints(args.out, args.keep_ckpts)
     score, base = validate(model, val_loader, device)
     say(f"final val PSNR {score:.2f} dB (noisy input: {base:.2f} dB)")
     log.close()
