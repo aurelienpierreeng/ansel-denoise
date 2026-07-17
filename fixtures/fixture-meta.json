@@ -1,0 +1,21 @@
+{
+ "n": 96,
+ "cfg": {
+  "arch": "unet",
+  "base": 32,
+  "depth": 4,
+  "in_channels": 5,
+  "out_channels": 1
+ },
+ "model_sha256": "656dbf3c25e357b1e9794d750757469b0344ddaddfee3ee362feb84895ad19fc",
+ "input_sha256": "55b56c4fcd9e555739cc37bee61d37de9868122647f058c3ed66e206c1a70dd3",
+ "expected_sha256": "4597de8b7a812be34fa4f49b5cbca6041ed4fb49d2b16bacb2edaf5e48b2fa78",
+ "tolerance_abs": 0.0002,
+ "input_planes": [
+  "mosaic",
+  "onehot_R",
+  "onehot_G",
+  "onehot_B",
+  "sigma"
+ ]
+}
