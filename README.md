@@ -81,6 +81,11 @@ python3.12 -m ansel_denoise.train --shards shards/rpu --out runs/v1 \
     --steps 300000 --batch 32
 ```
 
+For a free test run, [notebooks/colab_train.ipynb](notebooks/colab_train.ipynb)
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/aurelienpierreeng/ansel-denoise/blob/master/notebooks/colab_train.ipynb)
+trains on a free Colab T4 from the published shard cache, checkpoints to your
+Google Drive, and auto-resumes after the session dies — re-run all cells.
+
 Runs as-is on CPU (smoke test) or a single CUDA GPU (real training, 1–3 days
 on one consumer GPU); see [docs/cloud.md](docs/cloud.md) for the remote
 workflow. Validation PSNR is measured on **held-out cameras** (deterministic
