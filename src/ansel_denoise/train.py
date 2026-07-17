@@ -122,6 +122,13 @@ def main(argv: list[str] | None = None) -> int:
         model.load_state_dict(ckpt["model"])
         opt.load_state_dict(ckpt["opt"])
         step = ckpt["step"]
+        # The checkpointed optimizer carries the PREVIOUS schedule's last lr —
+        # 0.0 if that run completed its cosine. CosineAnnealingLR.step() is a
+        # recursive multiplicative formula on the current lr, so fast-forwarding
+        # from 0 stays 0 forever; reset to the base lr first, then the
+        # fast-forward reproduces the closed-form value for the new T_max.
+        for group in opt.param_groups:
+            group["lr"] = args.lr
         import warnings
         with warnings.catch_warnings():
             # fast-forwarding the scheduler necessarily steps it before any

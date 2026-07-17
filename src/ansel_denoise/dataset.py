@@ -36,7 +36,12 @@ def camera_split(camera: str, val_buckets: int = 10) -> str:
     return "val" if h % val_buckets == 0 else "train"
 
 
-@lru_cache(maxsize=64)
+# Sized for a few hundred shards per worker (~2-6 MB decompressed each). When
+# the cache is smaller than the shard set, random tile sampling thrashes it
+# and every access pays a full npz decompression (observed: 178 -> 78
+# patches/s on Colab when the harvest crossed 64 shards). Past ~1000 shards
+# this needs a locality-aware sampler instead of a bigger cache.
+@lru_cache(maxsize=256)
 def _open_shard(path: str) -> dict:
     with np.load(path) as z:
         return {k: z[k] for k in z.files}
