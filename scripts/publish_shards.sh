@@ -26,7 +26,7 @@ fi
 
 gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1 || gh release create "$TAG" \
     --repo "$REPO" --title "Harvested training shards ($TAG)" --latest=false \
-    --notes "Clean-tile shards harvested by scripts/harvest_rpu.sh. Cache only: the dataset is reproducible from ledger.jsonl + the raw.pixls.us annex commit. Fetch with scripts/fetch_shards.sh."
+    --notes "Clean-tile training shards for the Ansel neural raw denoiser. Cache only: the dataset is reproducible from ledger.jsonl + the harvest scripts. Fetch with scripts/fetch_shards.sh. LICENSING: mixed-provenance aggregate — raw.pixls.us shards are CC0-1.0, PlayRaw shards carry their per-shard declared CC license (attribution embedded), community-contributed shards (<handle>_ prefix) are under the Ansel Training Data License 1.0 (LICENSE-DATA.md, attached): denoiser training for the Ansel workflow only, every other use (generative AI included) forbidden. Intended use of the whole corpus: training denoising networks on your own infrastructure, which satisfies all classes at once. See the repository README and CONTRIBUTING.md for the full terms."
 
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT

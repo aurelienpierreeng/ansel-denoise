@@ -129,6 +129,21 @@ preview. Chain them while harvesting:
 ./scripts/publish_shards.sh shards/rpu && ./scripts/prune_shards.sh shards/rpu
 ```
 
+**Licensing of the shard release:** the corpus is an aggregate of three
+provenance classes, each identifiable per shard — raw.pixls.us harvest
+(**CC0-1.0**), PlayRaw photographs (**per-shard declared CC license**, with
+author/topic attribution embedded in shard and ledger), and community
+contributions (`<handle>_` prefix, **[ATDL-1.0](LICENSE-DATA.md)**: denoiser
+training for the Ansel workflow only, everything else — generative AI
+included — forbidden). The intended use, training denoising networks on your
+own infrastructure, satisfies all classes at once: it is non-commercial
+free-software development, attribution travels in the metadata, and it is
+the only ATDL-permitted purpose. Any other reuse requires per-shard license
+filtering and excludes the contributed shards. The full terms live on the
+[release page](https://github.com/aurelienpierreeng/ansel-denoise/releases/tag/shards-v1)
+and in [LICENSE-DATA.md](LICENSE-DATA.md), which is attached to the release
+alongside the data.
+
 Frequent incremental publishes accumulate small tarballs on the release;
 `./scripts/compact_shards.sh` occasionally merges them back into ~1.8 GB ones
 (client-side — GitHub cannot merge assets server-side). It uploads the merged
@@ -198,5 +213,11 @@ is for numerical cross-checking of the C/OpenCL implementation.
 
 ## License
 
-GPL-3.0-or-later, like Ansel. `data/noiseprofiles.json` comes from the
-darktable project (GPL-3.0) and carries its profiling contributors' work.
+The **code** is GPL-3.0-or-later, like Ansel. `data/noiseprofiles.json` comes
+from the darktable project (GPL-3.0) and carries its profiling contributors'
+work.
+
+The **data** (training shards on the release, and community-contributed
+tiles) is licensed separately, per provenance class — see the shard-release
+licensing paragraph above and [LICENSE-DATA.md](LICENSE-DATA.md) for the
+Ansel Training Data License covering community contributions.
