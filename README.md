@@ -203,20 +203,18 @@ python3.12 -m ansel_denoise.train --shards shards/rpu --out runs/v1 \
     --steps 300000 --batch 32
 ```
 
-For a free test run, [notebooks/colab_train.ipynb](notebooks/colab_train.ipynb)
-[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/aurelienpierreeng/ansel-denoise/blob/master/notebooks/colab_train.ipynb)
-trains on a free Colab T4 from the published shard cache, checkpoints to your
-Google Drive, and auto-resumes after the session dies — re-run all cells.
-
-Its Kaggle twin, [notebooks/kaggle_train.ipynb](notebooks/kaggle_train.ipynb)
-([import it](https://www.kaggle.com/kernels/welcome?src=https://github.com/aurelienpierreeng/ansel-denoise/blob/master/notebooks/kaggle_train.ipynb)),
-runs the same fixed-schedule contract on Kaggle's free GPUs (~30 h/week,
-T4 ×2 or P100): checkpoints persist to a private Kaggle Dataset via API
-secrets (with the committed version output as automatic fallback), sessions
-stop on a wall-clock budget so the save always happens, and resume finds the
-newest checkpoint across the session, attached datasets and prior version
-outputs. Between the two free tiers, a full 100k-step training fits
-comfortably in one week of quota.
+One notebook, [notebooks/train.ipynb](notebooks/train.ipynb), covers
+**local, Colab and Kaggle** with automatic environment detection —
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/aurelienpierreeng/ansel-denoise/blob/master/notebooks/train.ipynb)
+or [import it on Kaggle](https://www.kaggle.com/kernels/welcome?src=https://github.com/aurelienpierreeng/ansel-denoise/blob/master/notebooks/train.ipynb).
+Same contract everywhere: one fixed cosine schedule, run all cells, and
+after any disconnect run them again — training resumes from the newest
+checkpoint until done. Per-environment branching handles the rest:
+checkpoints persist to `runs/` locally, to Google Drive on Colab, and on
+Kaggle (~30 GPU-h/week, T4 ×2/P100) to a private Kaggle Dataset via API
+secrets with the committed version output as automatic fallback, plus a
+wall-clock budget so the save always beats the session kill. Between the
+two free tiers, a full 100k-step training fits in one week of quota.
 
 Runs as-is on CPU (smoke test) or a single CUDA GPU (real training, 1–3 days
 on one consumer GPU); see [docs/cloud.md](docs/cloud.md) for the remote

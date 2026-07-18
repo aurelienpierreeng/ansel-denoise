@@ -4,15 +4,14 @@ Nothing in this pipeline is laptop-bound: the laptop only needs the code. Both
 heavy stages (harvest bandwidth, training compute) run on a rented box with
 the *same commands* as locally — there is no separate cloud path to maintain.
 
-For **zero-budget training**, two notebook twins run the same fixed-schedule,
-resume-until-done contract on free GPU tiers:
-[`notebooks/colab_train.ipynb`](../notebooks/colab_train.ipynb) (Colab T4,
-checkpoints on Google Drive) and
-[`notebooks/kaggle_train.ipynb`](../notebooks/kaggle_train.ipynb) (Kaggle
-T4 ×2/P100, ~30 h GPU/week, checkpoints pushed to a private Kaggle Dataset
-via API secrets, committed version output as fallback, wall-clock budget so
-the save beats the session cap). The rest of this page is the rented-box
-path.
+For **zero-budget training**, a single notebook —
+[`notebooks/train.ipynb`](../notebooks/train.ipynb) — runs the same
+fixed-schedule, resume-until-done contract everywhere, with automatic
+environment detection and internal branching: local Jupyter (checkpoints in
+`runs/`), Colab T4 (checkpoints on Google Drive), Kaggle T4 ×2/P100
+(~30 h GPU/week; checkpoints pushed to a private Kaggle Dataset via API
+secrets, committed version output as fallback, wall-clock budget so the
+save beats the session cap). The rest of this page is the rented-box path.
 
 ## Sizing
 
