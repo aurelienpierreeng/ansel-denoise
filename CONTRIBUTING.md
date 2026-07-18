@@ -42,9 +42,19 @@ exactly like publishing crops of the photos.
 ## Privacy and license
 
 - Contributed tiles are published as **public assets** on this repository's
-  `shards-v1` GitHub release, under **CC0-1.0** (public domain dedication).
-  Anyone can download them. This is deliberate: it makes the training corpus
-  reproducible and auditable by anyone, with no hidden data.
+  `shards-v1` GitHub release. This is deliberate: it makes the training
+  corpus reproducible and auditable by anyone, with no hidden data.
+- Public does **not** mean free-for-all: the tiles are licensed under the
+  **[Ansel Training Data License 1.0](LICENSE-DATA.md)** (ATDL-1.0), which
+  you keep the copyright under. In short: the tiles may be used **solely**
+  by the Ansel project and by people reproducing this training workflow on
+  their own infrastructure; **only** to train denoising neural networks —
+  as clean ground truth, synthetically corrupted with noise so the network
+  learns to separate noise from detail, as documented in the
+  [denoiser design page](https://github.com/aurelienpierreeng/ansel/blob/master/doc/rawdenoiseai.md)
+  — and for **nothing else**: generative AI, dataset redistribution,
+  identification of people or places, and every other use are explicitly
+  forbidden. Accepting the license is accepting these prohibitions.
 - You must own the rights to the photographs you contribute.
 - **The curation step is your privacy control**: contribute only images whose
   content you are comfortable making public. No people, documents or places
@@ -88,6 +98,12 @@ yourself the time):
 Fifty varied, sharp, base-ISO images are worth more than five hundred
 near-duplicates.
 
+**Volume policy: up to ~1000 raw images per person.** The corpus needs
+content and camera variability, not bulk from a single library — a thousand
+images from one photographer already share one eye, one gear bag and one
+processing habit. The pack script enforces the cap; if your library has
+more to give, curate down to your most varied thousand.
+
 ## How to contribute, step by step
 
 Requirements: Linux or macOS (Windows: use WSL), Python ≥ 3.10, an Ansel
@@ -117,29 +133,45 @@ python3 -m ansel_denoise.harvest_library --paths-file ansel-image-files.txt --ou
 
 **3. Pack.** This validates every shard, prefixes them with your handle
 (so bundles from different people can never collide), writes a manifest with
-per-file checksums and your CC0 grant, and produces a single tarball:
+per-file checksums and your license grant, packs the license text with the
+data, and produces a single tarball:
 
 ```sh
 python3 scripts/pack_contribution.py shards/mine --handle your-github-name
 ```
 
-**4. Share.** Upload the printed `.tar.gz` to any file host the maintainer
-can download from — Google Drive, Dropbox, WeTransfer, Proton Drive, your
-own server — then open a
+**4. Upload.** Put the printed `.tar.gz` on any file host the maintainer can
+download from — Google Drive, Dropbox, WeTransfer, Proton Drive, your own
+server. Copy the download link.
+
+**5. Submit — no git knowledge needed.** One script opens the contribution
+pull request for you, through the [GitHub CLI](https://cli.github.com)
+(install it, e.g. `apt install gh` / `brew install gh` — it signs you into
+GitHub through your browser, forks the repository and opens the pull request
+on your behalf; you never touch git):
+
+```sh
+sh scripts/submit_contribution.sh ansel-denoise-contrib-<you>-<date>.tar.gz --url <your-link>
+```
+
+The pull request contains only a small metadata file (handle, link, hash,
+statistics, license grant) — not the images. If you'd rather not install
+`gh`, open a
 [Shard contribution issue](https://github.com/aurelienpierreeng/ansel-denoise/issues/new/choose)
-with the link and the sha256 the script printed.
+with the link and the sha256 instead.
 
 That's it. You can delete `shards/mine` and the bundle afterwards.
 
 ## What happens next (maintainer side)
 
-The maintainer runs:
+The maintainer reviews your pull request (the metadata file under
+`contrib/pending/`), then runs:
 
 ```sh
-./scripts/collect_contribution.sh <your-link> --sha256 <your-hash> --source <issue-url>
+./scripts/collect_contribution.sh contrib/pending/<you>-<date>.json --source <pr-url>
 ```
 
-which downloads the bundle, verifies the tarball hash against the issue,
+which downloads the bundle from your link, verifies the tarball hash,
 verifies every shard against the manifest checksums, re-validates shard
 structure and the ISO gate (shards are loaded with `allow_pickle=False`, so
 a bundle cannot execute code), merges the new shards into
@@ -149,6 +181,7 @@ who, when, from where, hash, tile statistics. The registry is committed, so
 the provenance of the whole corpus is public git history.
 
 Finally `./scripts/publish_shards.sh shards/contrib/<handle>` uploads the
-shards to the `shards-v1` release, where every future training fetches them
-with `scripts/fetch_shards.sh`, and your camera earns its place in the next
-model version's changelog.
+shards to the `shards-v1` release (with the [data license](LICENSE-DATA.md)
+alongside), the pending metadata file is removed in the same commit that
+records the registry entry, your pull request is merged — and your camera
+earns its place in the next model version's changelog.

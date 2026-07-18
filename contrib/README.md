@@ -15,7 +15,13 @@ Fields per entry:
 | `bundle_sha256` | hash of the ingested .tar.gz |
 | `n_shards_new` | shards actually merged (duplicates are skipped) |
 | `n_tiles` / `cameras` | corpus statistics of the bundle |
-| `license` | always `CC0-1.0` (the grant is in the bundle manifest) |
+| `license` | `ATDL-1.0` — the Ansel Training Data License ([LICENSE-DATA.md](../LICENSE-DATA.md)); the signed grant is in the bundle manifest |
+
+`pending/` is the submission queue: each contribution pull request (opened by
+`scripts/submit_contribution.sh`) adds one JSON metadata file there — handle,
+download link, bundle sha256, statistics, license grant. The maintainer
+ingests it with `scripts/collect_contribution.sh contrib/pending/<file>.json`
+and removes the pending file in the same commit that adds the registry entry.
 
 To remove a contribution later: delete the `<handle>_*.npz` names from the
 `shards-v1` release assets and from `published.txt`, and append a

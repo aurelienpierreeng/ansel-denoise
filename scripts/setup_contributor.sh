@@ -57,5 +57,9 @@ Setup complete. Next steps (details in $REPO_DIR/CONTRIBUTING.md):
      then File > Export image list... > Save as file...
   2. $PY -m ansel_denoise.harvest_library --paths-file ansel-image-files.txt --out shards/mine
   3. $PY $REPO_DIR/scripts/pack_contribution.py shards/mine --handle your-name
-  4. Upload the bundle and open a 'Shard contribution' issue with the link.
+  4. Upload the bundle to any file host, then submit it (opens the pull
+     request for you, no git knowledge needed; requires the gh CLI):
+     sh $REPO_DIR/scripts/submit_contribution.sh <bundle.tar.gz> --url <link>
 EOF
+command -v gh >/dev/null \
+    || echo "note: install the GitHub CLI (https://cli.github.com) before step 4."

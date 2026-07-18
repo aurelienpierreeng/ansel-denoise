@@ -1,5 +1,5 @@
 name: Shard contribution
-description: Contribute training tiles to the Ansel raw denoiser corpus
+description: Contribute training tiles to the Ansel raw denoiser corpus (fallback — prefer scripts/submit_contribution.sh, which opens a pull request for you)
 title: "[shards] contribution from <your-handle>"
 labels: ["shard-contribution"]
 body:
@@ -8,7 +8,9 @@ body:
       value: |
         Thanks for feeding the denoiser! Read [CONTRIBUTING.md](../blob/master/CONTRIBUTING.md)
         first — it explains what ends up public and how to build the bundle with
-        `scripts/pack_contribution.py`.
+        `scripts/pack_contribution.py`. If you have the `gh` CLI, prefer
+        `sh scripts/submit_contribution.sh` — it opens the contribution pull
+        request for you, no git knowledge needed. This form is the fallback.
   - type: input
     id: link
     attributes:
@@ -37,7 +39,9 @@ body:
       options:
         - label: I own the rights to these photographs.
           required: true
-        - label: I place the packed tiles under CC0-1.0 and understand they will be published on the public shard release and used for training.
+        - label: I license the packed tiles under the [Ansel Training Data License 1.0](../blob/master/LICENSE-DATA.md) — usable only by the Ansel project and by people reproducing its training workflow, only to train denoising neural networks; I understand that every other use, generative AI included, is explicitly forbidden, and that the tiles are published on the public shard release under that license.
           required: true
         - label: The images were shot at base ISO (the pack script enforced ISO ≤ 200).
+          required: true
+        - label: This contribution stays within the ~1000 images/person policy.
           required: true

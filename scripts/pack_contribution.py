@@ -35,9 +35,14 @@ sys.path.insert(0, str(REPO / "src"))
 
 from ansel_denoise.validate_shards import validate_dir  # noqa: E402
 
-GRANT = ("I own the rights to these photographs and I place the packed tiles "
-         "under the CC0-1.0 license, to be published on the ansel-denoise "
-         "public shard release and used for training.")
+LICENSE_TAG = "ATDL-1.0"
+MAX_IMAGES = 1000  # per person: the corpus needs variability, not single-library volume
+GRANT = ("I own the rights to these photographs and I license the packed tiles "
+         "under the Ansel Training Data License 1.0 (LICENSE-DATA.md): they may "
+         "be used only by the Ansel project and by people reproducing its "
+         "training workflow, only to train denoising neural networks (as clean "
+         "ground truth, synthetically corrupted with noise); every other use, "
+         "generative AI included, is explicitly forbidden.")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -51,7 +56,7 @@ def main(argv: list[str] | None = None) -> int:
                     help="where to write the bundle (default: current directory)")
     ap.add_argument("--max-iso", type=int, default=200)
     ap.add_argument("--yes", action="store_true",
-                    help="non-interactive: accept the CC0 grant printed by the script")
+                    help="non-interactive: accept the ATDL-1.0 grant printed by the script")
     args = ap.parse_args(argv)
 
     handle = args.handle.lower()
@@ -69,10 +74,15 @@ def main(argv: list[str] | None = None) -> int:
                  f"delete them and rerun.")
     if summary["n_shards"] == 0:
         sys.exit(f"no shards in {args.directory} — run harvest_library first")
+    if summary["n_shards"] > MAX_IMAGES:
+        sys.exit(f"{summary['n_shards']} images exceeds the ~{MAX_IMAGES} images/person "
+                 f"policy: the corpus needs content and camera variability more than "
+                 f"volume from one library — curate down to your best {MAX_IMAGES}.")
     print(f"{summary['n_shards']} shards, {summary['n_tiles']} tiles, "
           f"{len(summary['cameras'])} cameras")
 
     print(f"\nBy packing you declare:\n  {GRANT}")
+    print("  (full license text: LICENSE-DATA.md, packed with the bundle)")
     if not args.yes:
         if input("Type 'yes' to accept: ").strip().lower() != "yes":
             sys.exit("aborted: grant not accepted")
@@ -88,11 +98,14 @@ def main(argv: list[str] | None = None) -> int:
             shutil.copyfile(shard, stage / name)
             files[name] = hashlib.sha256(shard.read_bytes()).hexdigest()
 
+        # the license travels with the data
+        shutil.copyfile(REPO / "LICENSE-DATA.md", stage / "LICENSE-DATA.md")
+
         manifest = {
             "format": 1,
             "handle": handle,
             "created": date.isoformat(timespec="seconds"),
-            "license": "CC0-1.0",
+            "license": LICENSE_TAG,
             "grant": GRANT,
             "n_shards": summary["n_shards"],
             "n_tiles": summary["n_tiles"],
@@ -113,8 +126,10 @@ def main(argv: list[str] | None = None) -> int:
     print("\nNext:")
     print("  1. upload the bundle to any file host the maintainer can download from")
     print("     (Google Drive, Dropbox, WeTransfer, Proton Drive, your own server...)")
-    print("  2. open a 'Shard contribution' issue with the link and the sha256:")
-    print("     https://github.com/aurelienpierreeng/ansel-denoise/issues/new/choose")
+    print("  2. submit it — no git knowledge needed, the script does everything:")
+    print(f"     sh scripts/submit_contribution.sh {bundle} --url <your-download-link>")
+    print("     (or, without the gh CLI, open an issue instead:")
+    print("     https://github.com/aurelienpierreeng/ansel-denoise/issues/new/choose)")
     return 0
 
 

@@ -6,7 +6,9 @@
 # from where).
 #
 # Usage:
-#   ./scripts/collect_contribution.sh <url-or-tarball> [options]
+#   ./scripts/collect_contribution.sh <url-or-tarball-or-pending.json> [options]
+#     (a contrib/pending/*.json file from a contribution PR carries the
+#     download url and bundle hash itself)
 #     --sha256 HEX     verify the bundle hash (from the contribution issue)
 #     --source NOTE    provenance note for the registry (e.g. the issue URL);
 #                      defaults to the url/path argument
@@ -41,6 +43,16 @@ PY="${PYTHON:-python3.12}"
 command -v "$PY" >/dev/null || PY=python3
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
+
+# pending-PR metadata file: take url + hash from it
+case "$SRC" in *.json)
+    [ -f "$SRC" ] || { echo "no such file: $SRC" >&2; exit 1; }
+    [ -n "$SHA256" ] || SHA256=$("$PY" -c \
+        "import json,sys; print(json.load(open(sys.argv[1]))['bundle_sha256'])" "$SRC")
+    SRC=$("$PY" -c "import json,sys; print(json.load(open(sys.argv[1]))['url'])" "$SRC")
+    echo "pending file: fetching $SRC"
+    ;;
+esac
 
 # --- fetch -----------------------------------------------------------------
 if [ -f "$SRC" ]; then

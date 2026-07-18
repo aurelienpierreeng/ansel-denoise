@@ -118,9 +118,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", type=Path, required=True, help="shard output directory")
     ap.add_argument("--private", action="store_true",
                     help="mark the output directory private: publish_shards.sh will refuse it")
-    ap.add_argument("--license", default="cc0",
+    ap.add_argument("--license", default="ATDL-1.0",
                     help="license tag recorded for these shards (you are the rights holder; "
-                         "default cc0, matching the public release)")
+                         "default ATDL-1.0, the Ansel Training Data License — denoiser "
+                         "training only, see LICENSE-DATA.md)")
     ap.add_argument("--max-iso", type=int, default=200)
     ap.add_argument("--tiles", type=int, default=16)
     ap.add_argument("--tile-size", type=int, default=256)
