@@ -145,10 +145,21 @@ and chroma noise is suppressed (an inherently cross-channel inference).
    negative ones. Training uses the identical approximation, so the network
    learns with the exact conditioning statistics it will see at inference.
    Training/inference symmetry beats theoretical exactness here.
-4. **The input domain is Ansel's, exactly.** Black-subtracted, white-
-   normalized, **pre-white-balance** mosaic — the module runs at that exact
-   pipeline point (before `temperature`, CA correction and demosaic).
-   Feeding developed or white-balanced data is out of domain by design.
+4. **The input domain is Ansel's, exactly — down to the decoder's levels.**
+   Black-subtracted, white-normalized, **pre-white-balance** mosaic — the
+   module runs at that exact pipeline point (before `temperature`, CA
+   correction and demosaic). The noise profiles are fit on data normalized by
+   **Rawspeed's** sensor levels (Ansel's `rawprepare`), while the harvest
+   decodes with libraw, whose levels can disagree (observed up to ±24% on the
+   white level). Training therefore normalizes with Rawspeed's levels from a
+   table generated off its `cameras.xml` (`data/rawspeed_levels.json`,
+   matched by camera and ISO, bit-depth disambiguated by the file's libraw
+   white) — ~63% of the corpus gets the byte-exact runtime domain; the rest
+   (cameras with per-file dynamic black, unknown models) falls back to the
+   shard's libraw metadata. On top, training jitters the levels (white
+   ±(−8/+5)%, black ±0.2% of white) so the network is explicitly invariant
+   to residual decoder disagreement. Feeding developed or white-balanced
+   data remains out of domain by design.
 5. **Exactly one color per photosite.** The one-hot encoding assumes a CFA;
    monochrome sensors (Leica M Monochrom, Pentax Monochrome) are excluded
    at harvest (`num_colors != 3`) and at runtime (no mosaic → module

@@ -263,6 +263,7 @@ is for numerical cross-checking of the C/OpenCL implementation.
 | `src/ansel_denoise/train.py` | training loop, camera-holdout validation |
 | `src/ansel_denoise/export.py` | `.anselnn` / ONNX export |
 | `data/noiseprofiles.json` | profile DB from upstream darktable (superset of Ansel's); refresh with `scripts/update_noiseprofiles.sh`, source commit pinned in `data/noiseprofiles.upstream` |
+| `data/rawspeed_levels.json` | per-camera sensor black/white levels from Rawspeed's `cameras.xml` — training normalizes in Ansel's exact runtime domain (the profiles' domain); refresh with `scripts/update_rawspeed_levels.py` |
 
 ## License
 
