@@ -24,7 +24,7 @@ Each shard contains exactly:
 | `tiles` | up to 16 crops of 256×256 raw sensor values (16-bit) |
 | `offsets` | where in the frame each tile was cropped |
 | `pattern` / `pattern4` | the sensor's CFA layout (Bayer/X-Trans) |
-| `black_per_channel`, `white`, `wb` | sensor calibration levels, white balance |
+| `black_per_channel`, `white`, `wb` | sensor calibration levels; the as-shot WB coefficients are metadata only — **never applied**, tiles stay pre-white-balance |
 | `iso` | the ISO the image was shot at |
 | `camera` | camera make and model, e.g. `NIKON CORPORATION D850` |
 | `source_path` | `library/<image-id>/<filename>` — the bare filename only |
