@@ -121,7 +121,8 @@ sh scripts/setup_contributor.sh
 **1. Curate in Ansel.** In the lighttable, select the images you are willing
 to make public tiles of (base ISO — sort or filter by ISO to be quick), then
 **File ▸ Export image list... ▸ Save as file...** and keep the proposed
-`ansel-image-files.txt` name.
+`ansel-image-files.txt` name. We accept up to 1000 images per contributors,
+to maintain a proper diversity in the dataset.
 
 **2. Harvest.** This reads your Ansel library database read-only, gates on
 ISO, decodes each file in a crash-isolated child process, and writes the
