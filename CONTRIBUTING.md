@@ -2,10 +2,17 @@
 
 The neural denoiser in Ansel's `rawdenoiseai` module learns what clean sensor
 data looks like from a corpus of **base-ISO raw tiles**, then noise is
-synthesized on top at training time from Ansel's camera noise profiles. The
-corpus is what limits quality: more scenes, more textures and more camera
-models directly translate into a better denoiser for everyone — especially
-for under-represented sensors (X-Trans, older CCDs, phones).
+synthesized on top at training time from Ansel's camera noise profiles.
+
+This is what sets it apart from every general-purpose AI denoiser: it is
+trained on **non-demosaiced sensor data, as close to the actual sensor
+reading as a raw file allows**, and deployed at the exact pipeline stage it
+was trained for — before white balance, chromatic-aberration correction and
+demosaicing, so every downstream stage inherits clean data. We control both
+the training and the usage, with no intermediate approximation in between.
+The corpus is what limits quality: more scenes, more textures and more
+camera models directly translate into a better denoiser for everyone —
+especially for under-represented sensors (X-Trans, older CCDs, phones).
 
 This page explains how to contribute images from your own Ansel library,
 what exactly leaves your machine, and what happens to it.

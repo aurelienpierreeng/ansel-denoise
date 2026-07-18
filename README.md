@@ -1,7 +1,30 @@
 # ansel-denoise
 
 Training pipeline for the neural raw denoiser of [Ansel](https://github.com/aurelienpierreeng/ansel)'s
-`rawdenoise` module (CFA domain, before demosaicing).
+`rawdenoiseai` module (CFA domain, before demosaicing).
+
+## Why this is not just another AI denoiser
+
+Every general-purpose AI denoiser learns from developed images — demosaiced,
+white-balanced, tone-mapped pixels, several destructive approximations away
+from the measurement. This network trains on **non-demosaiced sensor data,
+as close to the actual sensor reading as a raw file allows**, and runs at
+the exact same point of Ansel's pipeline: before white balance, before
+chromatic-aberration correction, before demosaicing. Training domain and
+inference domain are the same domain.
+
+That placement is where the magic compounds: noise is removed while it is
+still the well-characterized Poisson-Gaussian process sensor physics
+dictates — so it can be synthesized exactly from measured camera profiles —
+and every downstream stage inherits clean data. Demosaicing interpolates
+real detail instead of weaving noise into maze and zipper artifacts,
+CA correction sees clean edges, and nothing later has to fight amplified,
+correlated noise.
+
+And because the same project controls the pipeline, the training and the
+deployment point, there is no domain mismatch, no guessing about upstream
+processing, no compromise or intermediate approximation: a purpose-built
+network, excellent at exactly one thing, under conditions we define.
 
 ## Principle
 
