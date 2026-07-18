@@ -208,6 +208,16 @@ For a free test run, [notebooks/colab_train.ipynb](notebooks/colab_train.ipynb)
 trains on a free Colab T4 from the published shard cache, checkpoints to your
 Google Drive, and auto-resumes after the session dies — re-run all cells.
 
+Its Kaggle twin, [notebooks/kaggle_train.ipynb](notebooks/kaggle_train.ipynb)
+([import it](https://www.kaggle.com/kernels/welcome?src=https://github.com/aurelienpierreeng/ansel-denoise/blob/master/notebooks/kaggle_train.ipynb)),
+runs the same fixed-schedule contract on Kaggle's free GPUs (~30 h/week,
+T4 ×2 or P100): checkpoints persist to a private Kaggle Dataset via API
+secrets (with the committed version output as automatic fallback), sessions
+stop on a wall-clock budget so the save always happens, and resume finds the
+newest checkpoint across the session, attached datasets and prior version
+outputs. Between the two free tiers, a full 100k-step training fits
+comfortably in one week of quota.
+
 Runs as-is on CPU (smoke test) or a single CUDA GPU (real training, 1–3 days
 on one consumer GPU); see [docs/cloud.md](docs/cloud.md) for the remote
 workflow. Validation PSNR is measured on **held-out cameras** (deterministic
