@@ -69,12 +69,21 @@ applies the same ISO gate and tile pipeline, and records topic URL + author +
 license in the ledger and shards for attribution.
 
 Finally, your own Ansel library can contribute a **curated** set: select
-images in the lighttable, note their IDs, and harvest them by ID — the ID
-list is the curation, since tiles are viewable fragments of the photographs:
+images in the lighttable and export the selection through
+`File > Export image list...` — the list is the curation, since tiles are
+viewable fragments of the photographs. All the dialog's outputs are accepted:
+IDs or shell-quoted paths pasted from the clipboard as arguments, or the
+saved one-item-per-line `.txt` files:
 
 ```sh
 python3.12 -m ansel_denoise.harvest_library --ids 65345,65350-65360 --out shards/library
+python3.12 -m ansel_denoise.harvest_library --out shards/library '/photos/IMG 1.NEF' '/photos/IMG 2.NEF'
+python3.12 -m ansel_denoise.harvest_library --paths-file ansel-image-files.txt --out shards/library
+python3.12 -m ansel_denoise.harvest_library --ids-file ansel-image-ids.txt --out shards/library
 ```
+
+Paths resolve against `library.db` (as given, then symlink/relative-resolved),
+so they must reference files the library knows.
 
 Paths and metadata resolve through `~/.config/ansel/library.db` (opened
 read-only); the ISO gate uses the library's own EXIF data. By default the
