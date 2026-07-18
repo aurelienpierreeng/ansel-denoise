@@ -52,12 +52,41 @@ def validate(model, loader, device, max_batches: int = 50) -> tuple[float, float
 
 
 def save_checkpoint(path: Path, model, opt, step: int, best_psnr: float = float("-inf"),
-                    stale_vals: int = 0) -> None:
+                    stale_vals: int = 0, ema: dict | None = None) -> None:
     torch.save(
         {"cfg": model.cfg, "model": model.state_dict(), "opt": opt.state_dict(), "step": step,
-         "best_psnr": best_psnr, "stale_vals": stale_vals},
+         "best_psnr": best_psnr, "stale_vals": stale_vals,
+         **({"ema": ema} if ema is not None else {})},
         path,
     )
+
+
+def ema_init(model) -> dict:
+    return {k: v.detach().clone() for k, v in model.state_dict().items()}
+
+
+@torch.no_grad()
+def ema_update(ema: dict, model, decay: float, step: int) -> None:
+    # warmup ramp: early steps track the fast-moving weights closely, so a
+    # short run (or the start of a long one) is not stuck near initialization
+    d = min(decay, (1.0 + step) / (10.0 + step))
+    for k, v in model.state_dict().items():
+        if v.dtype.is_floating_point:
+            ema[k].mul_(d).add_(v.detach(), alpha=1.0 - d)
+        else:
+            ema[k].copy_(v)
+
+
+@torch.no_grad()
+def validate_ema(model, ema: dict, loader, device, max_batches: int = 50) -> tuple[float, float]:
+    """Validate the EMA weights by swapping them into the model (VRAM-cheap:
+    no second model instance), restoring the live weights afterwards."""
+    backup = {k: v.detach().clone() for k, v in model.state_dict().items()}
+    model.load_state_dict(ema)
+    try:
+        return validate(model, loader, device, max_batches)
+    finally:
+        model.load_state_dict(backup)
 
 
 def rotate_checkpoints(out: Path, keep: int) -> None:
@@ -89,6 +118,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--patience", type=int, default=0,
                     help="stop after N validations without a +0.05 dB val-PSNR improvement, "
                          "counted across resumed sessions (0 = never stop early)")
+    ap.add_argument("--ema-decay", type=float, default=0.999,
+                    help="exponential moving average of the weights; the EMA weights are "
+                         "what gets validated, kept as ckpt-best and exported (0 = disable)")
     ap.add_argument("--schedule", choices=["cosine", "constant"], default="cosine",
                     help="cosine: one-shot run annealing to 0 at --steps. constant: for "
                          "incremental sessions with a moving --steps target — a cosine pinned "
@@ -132,6 +164,7 @@ def main(argv: list[str] | None = None) -> int:
     step = 0
     best_psnr = float("-inf")
     stale_vals = 0
+    ema = ema_init(model) if args.ema_decay > 0 else None
 
     if args.resume:
         ckpt = torch.load(args.resume, map_location=device)
@@ -140,6 +173,11 @@ def main(argv: list[str] | None = None) -> int:
         step = ckpt["step"]
         best_psnr = ckpt.get("best_psnr", float("-inf"))
         stale_vals = ckpt.get("stale_vals", 0)
+        if ema is not None:
+            # older checkpoints carry no EMA state: seed it from the resumed
+            # weights, which the warmup ramp then tracks closely
+            ema = ckpt.get("ema") or ema_init(model)
+            ema = {k: v.to(device) for k, v in ema.items()}
         # The checkpointed optimizer carries the PREVIOUS schedule's last lr —
         # 0.0 if that run completed its cosine. CosineAnnealingLR.step() is a
         # recursive multiplicative formula on the current lr, so fast-forwarding
@@ -177,6 +215,8 @@ def main(argv: list[str] | None = None) -> int:
             scaler.update()
             sched.step()
             step += 1
+            if ema is not None:
+                ema_update(ema, model, args.ema_decay, step)
             li = loss.item()
             loss_acc += li
             n_acc += 1
@@ -203,13 +243,23 @@ def main(argv: list[str] | None = None) -> int:
                     f"  lr {lr_now:.2e}")
                 t0, loss_acc, n_acc = time.time(), 0.0, 0
             if step % args.val_every == 0:
-                score, base = validate(model, val_loader, device)
+                # the EMA weights are the shipping artifact: they drive the
+                # metric, the best-checkpoint gate and the early stop; the raw
+                # weights are reported alongside for visibility
+                if ema is not None:
+                    score, base = validate_ema(model, ema, val_loader, device)
+                    raw_score, _ = validate(model, val_loader, device)
+                    detail = f"(noisy input: {base:.2f} dB, raw {raw_score:.2f}, "
+                else:
+                    score, base = validate(model, val_loader, device)
+                    detail = f"(noisy input: {base:.2f} dB, "
                 if score > best_psnr + 0.05:
                     best_psnr, stale_vals = score, 0
-                    save_checkpoint(args.out / "ckpt-best.pt", model, opt, step, best_psnr, stale_vals)
+                    save_checkpoint(args.out / "ckpt-best.pt", model, opt, step, best_psnr,
+                                    stale_vals, ema)
                 else:
                     stale_vals += 1
-                say(f"step {step:7d}  val PSNR {score:.2f} dB (noisy input: {base:.2f} dB, "
+                say(f"step {step:7d}  val PSNR {score:.2f} dB {detail}"
                     f"best {best_psnr:.2f}, stale {stale_vals})")
                 if args.patience and stale_vals >= args.patience:
                     say(f"early stop at step {step}: {stale_vals} validations without improvement "
@@ -217,16 +267,22 @@ def main(argv: list[str] | None = None) -> int:
                     stalled = True
                     break
             if step % args.ckpt_every == 0:
-                save_checkpoint(args.out / f"ckpt-{step:08d}.pt", model, opt, step, best_psnr, stale_vals)
+                save_checkpoint(args.out / f"ckpt-{step:08d}.pt", model, opt, step, best_psnr,
+                                stale_vals, ema)
                 rotate_checkpoints(args.out, args.keep_ckpts)
 
     # numbered checkpoint is the resume anchor (strictly increasing names);
     # ckpt-final.pt is a stable alias for the export step
-    save_checkpoint(args.out / f"ckpt-{step:08d}.pt", model, opt, step, best_psnr, stale_vals)
-    save_checkpoint(args.out / "ckpt-final.pt", model, opt, step, best_psnr, stale_vals)
+    save_checkpoint(args.out / f"ckpt-{step:08d}.pt", model, opt, step, best_psnr, stale_vals, ema)
+    save_checkpoint(args.out / "ckpt-final.pt", model, opt, step, best_psnr, stale_vals, ema)
     rotate_checkpoints(args.out, args.keep_ckpts)
-    score, base = validate(model, val_loader, device)
-    say(f"final val PSNR {score:.2f} dB (noisy input: {base:.2f} dB)")
+    if ema is not None:
+        score, base = validate_ema(model, ema, val_loader, device)
+        raw_score, _ = validate(model, val_loader, device)
+        say(f"final val PSNR {score:.2f} dB (noisy input: {base:.2f} dB, raw {raw_score:.2f})")
+    else:
+        score, base = validate(model, val_loader, device)
+        say(f"final val PSNR {score:.2f} dB (noisy input: {base:.2f} dB)")
     log.close()
     return 0
 

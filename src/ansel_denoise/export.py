@@ -24,13 +24,15 @@ import torch
 from .model import build_model
 
 
-def load_model(ckpt_path: Path):
+def load_model(ckpt_path: Path, raw_weights: bool = False):
     ckpt = torch.load(ckpt_path, map_location="cpu")
     cfg = ckpt["cfg"]
     model = build_model(base=cfg["base"], depth=cfg["depth"])
-    model.load_state_dict(ckpt["model"])
+    # the EMA weights are the shipping artifact when the run maintained them
+    weights = ckpt["model"] if raw_weights or "ema" not in ckpt else ckpt["ema"]
+    model.load_state_dict(weights)
     model.eval()
-    return model, cfg, ckpt.get("step")
+    return model, cfg, ckpt.get("step"), ("raw" if raw_weights or "ema" not in ckpt else "ema")
 
 
 def write_anselnn(model, cfg: dict, out: Path) -> int:
@@ -55,12 +57,14 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("checkpoint", type=Path)
     ap.add_argument("--out", type=Path, default=None, help="default: checkpoint name + .anselnn")
     ap.add_argument("--onnx", type=Path, default=None, help="also export ONNX to this path")
+    ap.add_argument("--raw-weights", action="store_true",
+                    help="export the live training weights instead of the EMA average")
     args = ap.parse_args(argv)
 
-    model, cfg, step = load_model(args.checkpoint)
+    model, cfg, step, which = load_model(args.checkpoint, raw_weights=args.raw_weights)
     out = args.out or args.checkpoint.with_suffix(".anselnn")
     size = write_anselnn(model, cfg, out)
-    print(f"{out} ({size / 1e6:.1f} MB, step {step}, cfg {cfg})")
+    print(f"{out} ({size / 1e6:.1f} MB, step {step}, {which} weights, cfg {cfg})")
 
     if args.onnx:
         dummy = torch.zeros(1, cfg["in_channels"], 128, 128)
