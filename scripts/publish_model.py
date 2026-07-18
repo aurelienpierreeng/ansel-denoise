@@ -11,7 +11,8 @@ Publishing rules:
   - filenames are rawdenoiseai-<version>-<variant>.anselnn and never change
     for a given (version, variant);
   - during R&D a (version, variant) MAY be overridden: the manifest's
-    revision counter bumps so consumers can see churn;
+    revision counter bumps so consumers can see churn; commit the update
+    normally (no history rewriting);
   - once a version has shipped in a tagged stable Ansel release it is FROZEN:
     further training must become a new version (new enum value in the module,
     new file here). Overriding a frozen version silently changes the render
@@ -19,7 +20,7 @@ Publishing rules:
 
 Usage:
     python3.12 scripts/publish_model.py path/to/model.anselnn --version v1 --variant full
-Then commit models/ (amend the previous model commit during R&D churn) and push.
+Then commit models/ normally and push.
 """
 
 import argparse
@@ -66,7 +67,7 @@ def main() -> int:
     manifest_path.write_text(json.dumps(manifest, indent=1, sort_keys=True) + "\n")
     print(f"published {name}: {len(blob) / 1e6:.1f} MB, sha256 {new_sha[:16]}..., "
           f"revision {entry['revision'] + 1}")
-    print("now: git add models/ && git commit (amend the model commit during R&D) && git push")
+    print("now: git add models/ && git commit && git push")
     return 0
 
 

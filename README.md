@@ -151,9 +151,9 @@ python3.12 scripts/publish_model.py runs/v1/ckpt-final.anselnn --version v1 --va
 ```
 
 **Versioning policy:** filenames (`rawdenoiseai-<version>-<variant>.anselnn`)
-are permanent per (version, variant). During R&D a version may be overridden
-(the manifest `revision` bumps; amend the model commit rather than stacking
-30 MB blobs in history). **Once a version has shipped in a tagged stable
+are permanent per (version, variant). During R&D a version may be overridden:
+publish again and commit normally (the manifest `revision` bumps; history
+simply grows, no rewriting). **Once a version has shipped in a tagged stable
 Ansel release it is frozen** — further training becomes a new version with a
 new enum value in the Ansel module, so users' existing edits never change.
 
