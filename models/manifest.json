@@ -1,0 +1,10 @@
+{
+ "models": {
+  "rawdenoiseai-v1-full.anselnn": {
+   "revision": 2,
+   "sha256": "b48d125486f638da30dbb690b8b11d19c7ac8c49d69eb1c90bf9bf83cb915998",
+   "size": 30353804,
+   "updated": "2026-07-18"
+  }
+ }
+}

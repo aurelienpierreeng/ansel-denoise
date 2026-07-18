@@ -138,6 +138,25 @@ on one consumer GPU); see [docs/cloud.md](docs/cloud.md) for the remote
 workflow. Validation PSNR is measured on **held-out cameras** (deterministic
 hash split), so it reports cross-sensor generalization, not memorization.
 
+## Model distribution (`models/`)
+
+Trained models ship from this repo: Ansel's build fetches
+[`models/manifest.json`](models/manifest.json) from the raw GitHub URL and
+downloads each listed `.anselnn` verified by sha256 — so nightly builds bundle
+the current models, and an override here reaches every fresh build (stale
+local copies fail the hash check and re-download). Publish with:
+
+```sh
+python3.12 scripts/publish_model.py runs/v1/ckpt-final.anselnn --version v1 --variant full
+```
+
+**Versioning policy:** filenames (`rawdenoiseai-<version>-<variant>.anselnn`)
+are permanent per (version, variant). During R&D a version may be overridden
+(the manifest `revision` bumps; amend the model commit rather than stacking
+30 MB blobs in history). **Once a version has shipped in a tagged stable
+Ansel release it is frozen** — further training becomes a new version with a
+new enum value in the Ansel module, so users' existing edits never change.
+
 ## 3. Export for Ansel
 
 ```sh

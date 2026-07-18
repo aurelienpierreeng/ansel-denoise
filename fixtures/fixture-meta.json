@@ -7,9 +7,9 @@
   "in_channels": 5,
   "out_channels": 1
  },
- "model_sha256": "656dbf3c25e357b1e9794d750757469b0344ddaddfee3ee362feb84895ad19fc",
+ "model_sha256": "b48d125486f638da30dbb690b8b11d19c7ac8c49d69eb1c90bf9bf83cb915998",
  "input_sha256": "55b56c4fcd9e555739cc37bee61d37de9868122647f058c3ed66e206c1a70dd3",
- "expected_sha256": "4597de8b7a812be34fa4f49b5cbca6041ed4fb49d2b16bacb2edaf5e48b2fa78",
+ "expected_sha256": "5543a19e0f4d3f24f8f0bd83b02e1e81fde42565c8eb76809feb488d7d2de9ce",
  "tolerance_abs": 0.0002,
  "input_planes": [
   "mosaic",
