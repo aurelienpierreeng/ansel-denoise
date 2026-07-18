@@ -1,5 +1,10 @@
 # Contributing training images to the Ansel raw denoiser
 
+> **Prefer the rendered version:** this guide also lives on the Ansel website
+> at [ansel.photos/en/contribute/training-data](https://ansel.photos/en/contribute/training-data/) —
+> same content, nicer to read. This file remains the reference the scripts
+> and templates link to.
+
 The neural denoiser in Ansel's `rawdenoiseai` module learns what clean sensor
 data looks like from a corpus of **base-ISO raw tiles**, then noise is
 synthesized on top at training time from Ansel's camera noise profiles.
