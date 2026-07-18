@@ -1,5 +1,11 @@
 {
  "models": {
+  "rawdenoiseai-v1-distilled.anselnn": {
+   "revision": 1,
+   "sha256": "bebbbe799111a077e863f0fa76d157c1396b31efb88b6d1ad14f7b7e77d4fb12",
+   "size": 7597369,
+   "updated": "2026-07-18"
+  },
   "rawdenoiseai-v1-full.anselnn": {
    "revision": 2,
    "sha256": "b48d125486f638da30dbb690b8b11d19c7ac8c49d69eb1c90bf9bf83cb915998",
