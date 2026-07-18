@@ -85,6 +85,12 @@ python3.12 -m ansel_denoise.harvest_library --ids-file ansel-image-ids.txt --out
 Paths resolve against `library.db` (as given, then symlink/relative-resolved),
 so they must reference files the library knows.
 
+**Community contributions:** anyone can feed the corpus from their own Ansel
+library — see [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow
+(one-script setup, curation = lighttable selection, `pack_contribution.py`
+bundle, maintainer ingest via `collect_contribution.sh`, public bookkeeping
+in [`contrib/registry.jsonl`](contrib/registry.jsonl)).
+
 Paths and metadata resolve through `~/.config/ansel/library.db` (opened
 read-only); the ISO gate uses the library's own EXIF data. By default the
 output is publishable like any other source; pass `--private` to mark the

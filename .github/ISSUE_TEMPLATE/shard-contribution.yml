@@ -1,0 +1,43 @@
+name: Shard contribution
+description: Contribute training tiles to the Ansel raw denoiser corpus
+title: "[shards] contribution from <your-handle>"
+labels: ["shard-contribution"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for feeding the denoiser! Read [CONTRIBUTING.md](../blob/master/CONTRIBUTING.md)
+        first — it explains what ends up public and how to build the bundle with
+        `scripts/pack_contribution.py`.
+  - type: input
+    id: link
+    attributes:
+      label: Download link
+      description: Where the maintainer can download your .tar.gz bundle (any file host).
+      placeholder: https://...
+    validations:
+      required: true
+  - type: input
+    id: sha256
+    attributes:
+      label: Bundle sha256
+      description: Printed by pack_contribution.py after packing.
+      placeholder: e.g. 4f1a9c...
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes (optional)
+      description: Cameras included, anything unusual, etc.
+  - type: checkboxes
+    id: grant
+    attributes:
+      label: Rights and license
+      options:
+        - label: I own the rights to these photographs.
+          required: true
+        - label: I place the packed tiles under CC0-1.0 and understand they will be published on the public shard release and used for training.
+          required: true
+        - label: The images were shot at base ISO (the pack script enforced ISO ≤ 200).
+          required: true
