@@ -5,7 +5,22 @@ Training pipeline for the neural raw denoiser of [Ansel](https://github.com/aure
 
 ## Why this is not just another AI denoiser
 
-Every general-purpose AI denoiser learns from developed images — demosaiced,
+First, why a neural network at all — because this is not AI-FOMO, it is the
+end of a road the field has walked for twenty years. Fine detail and noise
+live in the **same high frequencies**: any filter that separates them by
+frequency (gaussian, median, wavelet thresholding) must destroy one to
+remove the other, by construction. The only way out is to be
+**content- and context-aware** — decide from the surrounding image what is
+signal and what is chance. That insight produced non-local means (denoise a
+patch using every similar patch in the image), then BM3D (collaborative
+filtering of matched 3D blocks), which has been exploited to the maximum of
+its abilities and has plateaued for over a decade. A convolutional network
+is the same idea carried further — context priors *learned* from data
+instead of hand-coded self-similarity — and it is today the only known way
+to push past that plateau. We use one because the classical context-aware
+line is exhausted, not because AI is fashionable.
+
+Second, why ours is different. Every general-purpose AI denoiser learns from developed images — demosaiced,
 white-balanced, tone-mapped pixels, several destructive approximations away
 from the measurement. This network trains on **non-demosaiced sensor data,
 as close to the actual sensor reading as a raw file allows**, and runs at
