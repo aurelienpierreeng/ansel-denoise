@@ -66,6 +66,13 @@ The network input is `[noisy mosaic, R/G/B one-hot CFA planes, sigma map]`
 as a residual. The user-facing "strength" control in Ansel scales the sigma
 map — the training already covers mis-scaled sigmas via profile jitter.
 
+**[docs/architecture.md](docs/architecture.md)** is the deep dive: the exact
+network topology, why every design choice was made (residual output, no
+normalization, operator vocabulary matched to the C/OpenCL executor), how
+the encoding lets the network exploit inter-channel correlations despite
+their spatial offsets in the mosaic, and the full list of assumptions the
+model makes (and what it cannot do, by design).
+
 ## Requirements
 
 - Python ≥ 3.10 with `numpy` (harvest additionally needs `rawpy` and the
