@@ -199,11 +199,6 @@ def _pack_worker(path: str, rel: str, out_dir: str, tile_size: int, n_tiles: int
     raw.pixls.us deliberately hosts decoder-hostile files, and a libraw
     segfault must cost one ledger entry, not the harvest run."""
     try:
-        # cap the child's address space: a runaway decode should die here (one
-        # 'error' ledger entry) rather than summon the system OOM killer
-        import resource
-        resource.setrlimit(resource.RLIMIT_AS, (4 << 30, 4 << 30))
-
         dec = decode_raw(Path(path))
         if dec is None:
             q.put({"status": "rejected", "reason": "not a 3-color mosaic raw"})
