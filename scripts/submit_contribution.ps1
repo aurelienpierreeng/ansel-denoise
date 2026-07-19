@@ -19,7 +19,14 @@ $Repo = if ($env:ANSEL_DENOISE_REPO) { $env:ANSEL_DENOISE_REPO } else { "aurelie
 if (-not (Test-Path $Bundle)) { Write-Host "no such file: $Bundle" -ForegroundColor Red; exit 1 }
 foreach ($tool in @("gh", "git", "tar")) {
     if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) {
-        Write-Host "ERROR: '$tool' is required. Install with:  winget install Git.Git GitHub.cli" -ForegroundColor Red
+        Write-Host "ERROR: '$tool' is required." -ForegroundColor Red
+        Write-Host "Install with:  winget install Git.Git GitHub.cli"
+        Write-Host "No winget (common on Windows 10)? Download the installers directly:"
+        Write-Host "  Git for Windows: https://git-scm.com/download/win"
+        Write-Host "  GitHub CLI:      https://cli.github.com (Download for Windows)"
+        Write-Host "then close and reopen PowerShell. Or skip the installs entirely and"
+        Write-Host "open a 'Shard contribution' issue with your link and checksum:"
+        Write-Host "  https://github.com/aurelienpierreeng/ansel-denoise/issues/new/choose"
         exit 1
     }
 }
