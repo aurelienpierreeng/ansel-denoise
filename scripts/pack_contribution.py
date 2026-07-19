@@ -22,7 +22,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
 import re
 import shutil
 import sys
@@ -127,16 +126,11 @@ def main(argv: list[str] | None = None) -> int:
     sha = hashlib.sha256(bundle.read_bytes()).hexdigest()
     print(f"\nbundle: {bundle} ({bundle.stat().st_size / 1e6:.1f} MB)")
     print(f"sha256: {sha}")
-    submit = (f"powershell -ExecutionPolicy Bypass -File scripts\\submit_contribution.ps1 "
-              f"-Bundle {bundle} -Url <your-download-link>" if os.name == "nt"
-              else f"sh scripts/submit_contribution.sh {bundle} --url <your-download-link>")
-    print("\nNext:")
-    print("  1. upload the bundle to any file host the maintainer can download from")
+    print("\nNext — two steps, no extra tools:")
+    print("  1. upload the bundle to any file host that gives a direct download link")
     print("     (Google Drive, Dropbox, WeTransfer, Proton Drive, your own server...)")
-    print("  2. submit it — no git knowledge needed, the script does everything:")
-    print(f"     {submit}")
-    print("     (or, without the gh CLI, open an issue instead:")
-    print("     https://github.com/aurelienpierreeng/ansel-denoise/issues/new/choose)")
+    print("  2. open a 'Shard contribution' issue with the link (and the sha256 above):")
+    print("     https://github.com/aurelienpierreeng/ansel-denoise/issues/new/choose")
     return 0
 
 
