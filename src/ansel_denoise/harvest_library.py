@@ -28,13 +28,23 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sqlite3
 import sys
 from pathlib import Path
 
 from .harvest import EXCLUDE_EXTENSIONS, RAW_EXTENSIONS, _pack_worker, run_isolated
 
-DEFAULT_DB = Path.home() / ".config" / "ansel" / "library.db"
+def default_db() -> Path:
+    """Ansel's library.db location: g_get_user_config_dir()/ansel/library.db,
+    which GLib resolves to %LOCALAPPDATA% on Windows and ~/.config elsewhere."""
+    if os.name == "nt":
+        return Path(os.environ.get("LOCALAPPDATA",
+                                   Path.home() / "AppData" / "Local")) / "ansel" / "library.db"
+    return Path.home() / ".config" / "ansel" / "library.db"
+
+
+DEFAULT_DB = default_db()
 
 
 def parse_ids(spec: str) -> list[int]:

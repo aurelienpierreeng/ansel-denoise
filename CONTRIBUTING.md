@@ -118,16 +118,39 @@ more to give, curate down to your most varied thousand.
 
 ## How to contribute, step by step
 
-Requirements: Linux or macOS (Windows: use WSL), Python ≥ 3.10, an Ansel
-library, and about 10 minutes.
+Requirements: Linux, macOS or Windows, Python ≥ 3.10, an Ansel library, and
+about 10 minutes. Every step below shows the Linux/macOS command first and
+the Windows (PowerShell) command after it.
 
-**0. Install the tooling** (one script — clones this repo if needed and
-installs the two Python dependencies, `numpy` and `rawpy`):
+**Windows first-timers — two one-time preparations:**
+
+- **Install Python** if `py --version` in a PowerShell window says it is
+  missing: either `winget install Python.Python.3.12` in PowerShell, or
+  download it from [python.org](https://www.python.org/downloads/) and
+  **check "Add python.exe to PATH"** in the installer's first screen.
+- **Open PowerShell in the right folder**: press `Win+X`, choose *Terminal*
+  (or *Windows PowerShell*), then `cd` to where you want the tools, e.g.
+  `cd $HOME\Documents`. You can paste commands with a right-click.
+  PowerShell refuses to run script files by default; that is why every
+  script command below is written with `-ExecutionPolicy Bypass`, which
+  allows just that one script for just that one run.
+
+**0. Install the tooling** (one script — installs the two Python
+dependencies, `numpy` and `rawpy`, and fetches this repository if needed;
+on Windows it downloads it as a ZIP, no git required):
 
 ```sh
 git clone https://github.com/aurelienpierreeng/ansel-denoise.git
 cd ansel-denoise
 sh scripts/setup_contributor.sh
+```
+
+On Windows (the script downloads the repository for you):
+
+```powershell
+Invoke-WebRequest https://raw.githubusercontent.com/aurelienpierreeng/ansel-denoise/master/scripts/setup_contributor.ps1 -OutFile setup_contributor.ps1
+powershell -ExecutionPolicy Bypass -File setup_contributor.ps1
+cd ansel-denoise
 ```
 
 **1. Curate in Ansel.** In the lighttable, select the images you are willing
@@ -144,6 +167,13 @@ shards. Nothing is uploaded:
 python3 -m ansel_denoise.harvest_library --paths-file ansel-image-files.txt --out shards/mine
 ```
 
+On Windows (the `py` launcher comes with Python; the library database is
+found automatically under `%LOCALAPPDATA%\ansel`):
+
+```powershell
+py -m ansel_denoise.harvest_library --paths-file ansel-image-files.txt --out shards\mine
+```
+
 **3. Pack.** This validates every shard, prefixes them with your handle
 (so bundles from different people can never collide), writes a manifest with
 per-file checksums and your license grant, packs the license text with the
@@ -153,18 +183,31 @@ data, and produces a single tarball:
 python3 scripts/pack_contribution.py shards/mine --handle your-github-name
 ```
 
+On Windows:
+
+```powershell
+py scripts\pack_contribution.py shards\mine --handle your-github-name
+```
+
 **4. Upload.** Put the printed `.tar.gz` on any file host the maintainer can
 download from — Google Drive, Dropbox, WeTransfer, Proton Drive, your own
 server. Copy the download link.
 
 **5. Submit — no git knowledge needed.** One script opens the contribution
 pull request for you, through the [GitHub CLI](https://cli.github.com)
-(install it, e.g. `apt install gh` / `brew install gh` — it signs you into
-GitHub through your browser, forks the repository and opens the pull request
-on your behalf; you never touch git):
+(install it, e.g. `apt install gh` / `brew install gh`, on Windows
+`winget install Git.Git GitHub.cli` — it signs you into GitHub through your
+browser, forks the repository and opens the pull request on your behalf; you
+never touch git):
 
 ```sh
 sh scripts/submit_contribution.sh ansel-denoise-contrib-<you>-<date>.tar.gz --url <your-link>
+```
+
+On Windows:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\submit_contribution.ps1 -Bundle ansel-denoise-contrib-<you>-<date>.tar.gz -Url <your-link>
 ```
 
 The pull request contains only a small metadata file (handle, link, hash,

@@ -22,10 +22,11 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import shutil
-import subprocess
 import sys
+import tarfile
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -117,17 +118,21 @@ def main(argv: list[str] | None = None) -> int:
 
         args.out.mkdir(parents=True, exist_ok=True)
         bundle = args.out / f"ansel-denoise-contrib-{handle}-{date:%Y%m%d}.tar.gz"
-        subprocess.run(["tar", "czf", str(bundle.resolve()), "-C", tmp, stage.name],
-                       check=True)
+        # tarfile, not a tar subprocess: works identically on Windows
+        with tarfile.open(bundle, "w:gz") as tar:
+            tar.add(stage, arcname=stage.name)
 
     sha = hashlib.sha256(bundle.read_bytes()).hexdigest()
     print(f"\nbundle: {bundle} ({bundle.stat().st_size / 1e6:.1f} MB)")
     print(f"sha256: {sha}")
+    submit = (f"powershell -ExecutionPolicy Bypass -File scripts\\submit_contribution.ps1 "
+              f"-Bundle {bundle} -Url <your-download-link>" if os.name == "nt"
+              else f"sh scripts/submit_contribution.sh {bundle} --url <your-download-link>")
     print("\nNext:")
     print("  1. upload the bundle to any file host the maintainer can download from")
     print("     (Google Drive, Dropbox, WeTransfer, Proton Drive, your own server...)")
     print("  2. submit it — no git knowledge needed, the script does everything:")
-    print(f"     sh scripts/submit_contribution.sh {bundle} --url <your-download-link>")
+    print(f"     {submit}")
     print("     (or, without the gh CLI, open an issue instead:")
     print("     https://github.com/aurelienpierreeng/ansel-denoise/issues/new/choose)")
     return 0
