@@ -199,7 +199,10 @@ pull request for you, through the [GitHub CLI](https://cli.github.com)
 (install it, e.g. `apt install gh` / `brew install gh`, on Windows
 `winget install Git.Git GitHub.cli` — it signs you into GitHub through your
 browser, forks the repository and opens the pull request on your behalf; you
-never touch git):
+never touch git). No `winget` on your Windows 10? Download the two
+installers directly — [Git for Windows](https://git-scm.com/download/win)
+and the [GitHub CLI](https://cli.github.com) — then close and reopen
+PowerShell; or skip the installs entirely and use the issue form below:
 
 ```sh
 sh scripts/submit_contribution.sh ansel-denoise-contrib-<you>-<date>.tar.gz --url <your-link>
