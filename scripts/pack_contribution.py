@@ -38,6 +38,13 @@ from ansel_denoise.validate_shards import validate_dir  # noqa: E402
 
 LICENSE_TAG = "ATDL-1.1"
 MAX_IMAGES = 1000  # per person: the corpus needs variability, not single-library volume
+# handles that are obviously the doc/example placeholder, not a real name:
+# refuse them so a contributor cannot ship a whole bundle under "your-github-name"
+# (it happened, issue #2), poisoning the corpus namespace and removal-by-handle.
+PLACEHOLDER_HANDLES = frozenset({
+    "your-github-name", "your-name", "your-handle", "your-username",
+    "your-github-username", "github-username", "handle", "name", "username",
+})
 GRANT = ("I own the rights to these photographs and I license the packed tiles "
          "under the Ansel Training Data License 1.1 (LICENSE-DATA.md): anyone "
          "may use them with the ansel-denoise training stack to audit, "
@@ -65,6 +72,10 @@ def main(argv: list[str] | None = None) -> int:
     handle = args.handle.lower()
     if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,30}", handle):
         ap.error("handle must be 1-31 chars of lowercase letters, digits, dashes")
+    if handle in PLACEHOLDER_HANDLES:
+        ap.error(f"'{args.handle}' is the example placeholder, not your handle — "
+                 f"pass --handle <your-github-username> (used to prefix your shards "
+                 f"and to attribute/remove them later)")
     if (args.directory / ".private").exists():
         sys.exit(f"REFUSING: {args.directory} is marked private (.private marker). "
                  f"Contributions are public by definition — harvest a curated, "
