@@ -57,16 +57,16 @@ exactly like publishing crops of the photos.
   `shards-v1` GitHub release. This is deliberate: it makes the training
   corpus reproducible and auditable by anyone, with no hidden data.
 - Public does **not** mean free-for-all: the tiles are licensed under the
-  **[Ansel Training Data License 1.0](LICENSE-DATA.md)** (ATDL-1.0), which
-  you keep the copyright under. In short: the tiles may be used **solely**
-  by the Ansel project and by people reproducing this training workflow on
-  their own infrastructure; **only** to train denoising neural networks —
-  as clean ground truth, synthetically corrupted with noise so the network
-  learns to separate noise from detail, as documented in the
-  [denoiser design page](https://github.com/aurelienpierreeng/ansel/blob/master/doc/rawdenoiseai.md)
-  — and for **nothing else**: generative AI, dataset redistribution,
-  identification of people or places, and every other use are explicitly
-  forbidden. Accepting the license is accepting these prohibitions.
+  **[Ansel Training Data License 1.1](LICENSE-DATA.md)** (ATDL-1.1), which
+  you keep the copyright under. In short: anyone may use the tiles **with
+  the ansel-denoise training stack** (GPL-3.0) — to audit, review,
+  reproduce and benchmark the Ansel denoiser (scientific and academic use
+  welcome), or to **train their own denoising models**, whose weights are
+  theirs without restriction, commercial applications included. The bright
+  line: the tiles must never feed a training stack able to learn anything
+  else than separating noise from signal — "style" learning, generative AI,
+  dataset redistribution, identification of people or places are explicitly
+  forbidden. Accepting the license is accepting that prohibition.
 - You must own the rights to the photographs you contribute.
 - **The curation step is your privacy control**: contribute only images whose
   content you are comfortable making public. No people, documents or places

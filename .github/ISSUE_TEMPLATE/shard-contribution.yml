@@ -39,7 +39,7 @@ body:
       options:
         - label: I own the rights to these photographs.
           required: true
-        - label: I license the packed tiles under the [Ansel Training Data License 1.0](../blob/master/LICENSE-DATA.md) — usable only by the Ansel project and by people reproducing its training workflow, only to train denoising neural networks; I understand that every other use, generative AI included, is explicitly forbidden, and that the tiles are published on the public shard release under that license.
+        - label: I license the packed tiles under the [Ansel Training Data License 1.1](../blob/master/LICENSE-DATA.md) — anyone may use them with the ansel-denoise training stack to audit, reproduce and benchmark the training, or to train their own denoising models (whose weights are theirs, commercial use included); I understand that feeding them to any training stack able to learn anything else — style, generative AI — is explicitly forbidden, and that the tiles are published on the public shard release under that license.
           required: true
         - label: The images were shot at base ISO (the pack script enforced ISO ≤ 200).
           required: true

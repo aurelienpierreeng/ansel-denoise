@@ -178,13 +178,15 @@ preview. Chain them while harvesting:
 provenance classes, each identifiable per shard — raw.pixls.us harvest
 (**CC0-1.0**), PlayRaw photographs (**per-shard declared CC license**, with
 author/topic attribution embedded in shard and ledger), and community
-contributions (`<handle>_` prefix, **[ATDL-1.0](LICENSE-DATA.md)**: denoiser
-training for the Ansel workflow only, everything else — generative AI
-included — forbidden). The intended use, training denoising networks on your
-own infrastructure, satisfies all classes at once: it is non-commercial
-free-software development, attribution travels in the metadata, and it is
-the only ATDL-permitted purpose. Any other reuse requires per-shard license
-filtering and excludes the contributed shards. The full terms live on the
+contributions (`<handle>_` prefix, **[ATDL-1.1](LICENSE-DATA.md)**: usable
+by anyone with the ansel-denoise training stack — to audit, reproduce and
+benchmark the training, or to train custom **denoising** models whose
+weights are unrestricted, commercial use included; feeding the tiles to any
+stack able to learn anything else — style, generative AI — is forbidden).
+The reference use, training denoising networks with this stack, satisfies
+all classes at once: attribution travels in the metadata and denoising is
+the only ATDL-permitted learning task. Any other reuse requires per-shard
+license filtering and excludes the contributed shards. The full terms live on the
 [release page](https://github.com/aurelienpierreeng/ansel-denoise/releases/tag/shards-v1)
 and in [LICENSE-DATA.md](LICENSE-DATA.md), which is attached to the release
 alongside the data.

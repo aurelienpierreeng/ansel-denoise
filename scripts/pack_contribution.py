@@ -36,14 +36,16 @@ sys.path.insert(0, str(REPO / "src"))
 
 from ansel_denoise.validate_shards import validate_dir  # noqa: E402
 
-LICENSE_TAG = "ATDL-1.0"
+LICENSE_TAG = "ATDL-1.1"
 MAX_IMAGES = 1000  # per person: the corpus needs variability, not single-library volume
 GRANT = ("I own the rights to these photographs and I license the packed tiles "
-         "under the Ansel Training Data License 1.0 (LICENSE-DATA.md): they may "
-         "be used only by the Ansel project and by people reproducing its "
-         "training workflow, only to train denoising neural networks (as clean "
-         "ground truth, synthetically corrupted with noise); every other use, "
-         "generative AI included, is explicitly forbidden.")
+         "under the Ansel Training Data License 1.1 (LICENSE-DATA.md): anyone "
+         "may use them with the ansel-denoise training stack to audit, "
+         "reproduce and benchmark the training, or to train their own "
+         "denoising models — whose weights are theirs, commercial use "
+         "included; feeding the tiles to any training stack able to learn "
+         "anything else than denoising (style, generative AI) is explicitly "
+         "forbidden.")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -57,7 +59,7 @@ def main(argv: list[str] | None = None) -> int:
                     help="where to write the bundle (default: current directory)")
     ap.add_argument("--max-iso", type=int, default=200)
     ap.add_argument("--yes", action="store_true",
-                    help="non-interactive: accept the ATDL-1.0 grant printed by the script")
+                    help="non-interactive: accept the ATDL-1.1 grant printed by the script")
     args = ap.parse_args(argv)
 
     handle = args.handle.lower()

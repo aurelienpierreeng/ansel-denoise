@@ -15,7 +15,7 @@ Fields per entry:
 | `bundle_sha256` | hash of the ingested .tar.gz |
 | `n_shards_new` | shards actually merged (duplicates are skipped) |
 | `n_tiles` / `cameras` | corpus statistics of the bundle |
-| `license` | `ATDL-1.0` — the Ansel Training Data License ([LICENSE-DATA.md](../LICENSE-DATA.md)); the signed grant is in the bundle manifest |
+| `license` | the ATDL version granted at pack time, e.g. `ATDL-1.1` ([LICENSE-DATA.md](../LICENSE-DATA.md)); the signed grant is in the bundle manifest |
 
 `pending/` is the submission queue: each contribution pull request (opened by
 `scripts/submit_contribution.sh`) adds one JSON metadata file there — handle,

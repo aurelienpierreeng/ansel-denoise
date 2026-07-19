@@ -76,8 +76,10 @@ Shard contribution bundle (packed by ``pack_contribution.py``, see CONTRIBUTING.
 
 By opening this pull request I confirm the grant recorded in the metadata
 file: I own the rights to these photographs and license the tiles under the
-[Ansel Training Data License 1.0](../blob/master/LICENSE-DATA.md) - denoiser
-training only, every other use (generative AI included) forbidden.
+[Ansel Training Data License 1.1](../blob/master/LICENSE-DATA.md) - usable
+with the ansel-denoise training stack to audit/benchmark or to train
+denoising models (resulting weights unrestricted); any stack able to learn
+anything else (style, generative AI) is forbidden.
 
 The maintainer ingests with:
 ``./scripts/collect_contribution.sh contrib/pending/$name.json --source <this PR URL>``
