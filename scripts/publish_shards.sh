@@ -74,7 +74,7 @@ flush_batch
 # keep the latest provenance ledger alongside the data
 [ -f "$DIR/ledger.jsonl" ] && gh release upload "$TAG" "$DIR/ledger.jsonl" --repo "$REPO" --clobber
 
-# the data license travels with the data (community shards are ATDL-1.0)
+# the data license travels with the data (community shards are ATDL-1.1)
 LICENSE_FILE="$(dirname "$0")/../LICENSE-DATA.md"
 [ -f "$LICENSE_FILE" ] && gh release upload "$TAG" "$LICENSE_FILE" --repo "$REPO" --clobber
 
