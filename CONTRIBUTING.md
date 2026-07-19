@@ -190,48 +190,27 @@ On Windows:
 py scripts\pack_contribution.py shards\mine --handle your-github-name
 ```
 
-**4. Upload.** Put the printed `.tar.gz` on any file host the maintainer can
-download from — Google Drive, Dropbox, WeTransfer, Proton Drive, your own
-server. Copy the download link.
-
-**5. Submit — no git knowledge needed.** One script opens the contribution
-pull request for you, through the [GitHub CLI](https://cli.github.com)
-(install it, e.g. `apt install gh` / `brew install gh`, on Windows
-`winget install Git.Git GitHub.cli` — it signs you into GitHub through your
-browser, forks the repository and opens the pull request on your behalf; you
-never touch git). No `winget` on your Windows 10? Download the two
-installers directly — [Git for Windows](https://git-scm.com/download/win)
-and the [GitHub CLI](https://cli.github.com) — then close and reopen
-PowerShell; or skip the installs entirely and use the issue form below:
-
-```sh
-sh scripts/submit_contribution.sh ansel-denoise-contrib-<you>-<date>.tar.gz --url <your-link>
-```
-
-On Windows:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts\submit_contribution.ps1 -Bundle ansel-denoise-contrib-<you>-<date>.tar.gz -Url <your-link>
-```
-
-The pull request contains only a small metadata file (handle, link, hash,
-statistics, license grant) — not the images. If you'd rather not install
-`gh`, open a
+**4. Upload and open an issue.** Put the printed `.tar.gz` on any file host that
+gives a **direct download link** — Google Drive, Dropbox, WeTransfer, Proton
+Drive, your own server — then open a
 [Shard contribution issue](https://github.com/aurelienpierreeng/ansel-denoise/issues/new/choose)
-with the link and the sha256 instead.
+and paste the link (the form also asks you to confirm the license grant).
+No extra tools, no git, nothing to install beyond what step 0 set up — the
+same command works on Linux, macOS and Windows.
 
-That's it. You can delete `shards/mine` and the bundle afterwards.
+That's the whole submission. The maintainer downloads the bundle from your
+link, verifies it and merges it into the corpus. You can delete `shards/mine`
+and the bundle afterwards.
 
 ## What happens next (maintainer side)
 
-The maintainer reviews your pull request (the metadata file under
-`contrib/pending/`), then runs:
+The maintainer opens your issue and runs:
 
 ```sh
-./scripts/collect_contribution.sh contrib/pending/<you>-<date>.json --source <pr-url>
+./scripts/collect_contribution.sh <your-link> --source <issue-url>
 ```
 
-which downloads the bundle from your link, verifies the tarball hash,
+which downloads the bundle from your link,
 verifies every shard against the manifest checksums, re-validates shard
 structure and the ISO gate (shards are loaded with `allow_pickle=False`, so
 a bundle cannot execute code), merges the new shards into

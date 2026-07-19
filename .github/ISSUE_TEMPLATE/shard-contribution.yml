@@ -1,5 +1,5 @@
 name: Shard contribution
-description: Contribute training tiles to the Ansel raw denoiser corpus (fallback — prefer scripts/submit_contribution.sh, which opens a pull request for you)
+description: Contribute training tiles to the Ansel raw denoiser corpus
 title: "[shards] contribution from <your-handle>"
 labels: ["shard-contribution"]
 body:
@@ -8,25 +8,24 @@ body:
       value: |
         Thanks for feeding the denoiser! Read [CONTRIBUTING.md](../blob/master/CONTRIBUTING.md)
         first — it explains what ends up public and how to build the bundle with
-        `scripts/pack_contribution.py`. If you have the `gh` CLI, prefer
-        `sh scripts/submit_contribution.sh` — it opens the contribution pull
-        request for you, no git knowledge needed. This form is the fallback.
+        `scripts/pack_contribution.py`. Then upload the single `.tar.gz` it produces
+        to any file host that gives a direct download link, and fill this in.
   - type: input
     id: link
     attributes:
       label: Download link
-      description: Where the maintainer can download your .tar.gz bundle (any file host).
+      description: A direct download link to your .tar.gz bundle (Google Drive, Dropbox, WeTransfer, Proton Drive, your own server...).
       placeholder: https://...
     validations:
       required: true
   - type: input
     id: sha256
     attributes:
-      label: Bundle sha256
-      description: Printed by pack_contribution.py after packing.
+      label: Bundle sha256 (optional)
+      description: Printed by pack_contribution.py. Optional — some file hosts recompress the file, changing this hash; the bundle carries per-file checksums that the maintainer verifies regardless.
       placeholder: e.g. 4f1a9c...
     validations:
-      required: true
+      required: false
   - type: textarea
     id: notes
     attributes:
