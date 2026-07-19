@@ -1,0 +1,14 @@
+{
+ "bundle_sha256": "fab696cfa5ed68ba221ecee55c7ef001dd91db551811080dea5a8c92178c97e8",
+ "cameras": {
+  "Canon Canon EOS 5D Mark III": 16
+ },
+ "created": "2026-07-19T15:29:00+00:00",
+ "format": 1,
+ "grant": "I own the rights to these photographs and I license the packed tiles under the Ansel Training Data License 1.1 (LICENSE-DATA.md): anyone may use them with the ansel-denoise training stack to audit, reproduce and benchmark the training, or to train their own denoising models \u2014 whose weights are theirs, commercial use included; feeding the tiles to any training stack able to learn anything else than denoising (style, generative AI) is explicitly forbidden.",
+ "handle": "your-github-name",
+ "license": "ATDL-1.1",
+ "n_shards": 1,
+ "n_tiles": 16,
+ "url": "https://www.swisstransfer.com/d/8bcb9d3a-e4d9-4408-a68d-ede63268646d"
+}
