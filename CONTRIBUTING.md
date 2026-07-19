@@ -159,9 +159,10 @@ to make public tiles of (base ISO — sort or filter by ISO to be quick), then
 `ansel-image-files.txt` name. We accept up to 1000 images per contributors,
 to maintain a proper diversity in the dataset.
 
-**2. Harvest.** This reads your Ansel library database read-only, gates on
-ISO, decodes each file in a crash-isolated child process, and writes the
-shards. Nothing is uploaded:
+**2. Harvest.** This gates on ISO and decodes each file in a crash-isolated
+child process, then writes the shards. Your Ansel library database is used
+read-only when present, but is not required — camera and ISO are read from
+the files themselves otherwise. Nothing is uploaded:
 
 ```sh
 python3 -m ansel_denoise.harvest_library --paths-file ansel-image-files.txt --out shards/mine

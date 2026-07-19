@@ -127,8 +127,10 @@ python3.12 -m ansel_denoise.harvest_library --paths-file ansel-image-files.txt -
 python3.12 -m ansel_denoise.harvest_library --ids-file ansel-image-ids.txt --out shards/library
 ```
 
-Paths resolve against `library.db` (as given, then symlink/relative-resolved),
-so they must reference files the library knows.
+Paths work **with or without** `library.db`: when the library knows the
+file, its metadata is used; otherwise camera and ISO are read from the file
+itself (TIFF tags + libraw, exiftool filling gaps when installed) — so a
+plain list of raw paths harvests on a machine that never ran Ansel.
 
 **Community contributions:** anyone can feed the corpus from their own Ansel
 library — see [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow
