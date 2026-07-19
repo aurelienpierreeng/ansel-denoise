@@ -9,12 +9,18 @@ body:
         Thanks for feeding the denoiser! Read [CONTRIBUTING.md](../blob/master/CONTRIBUTING.md)
         first — it explains what ends up public and how to build the bundle with
         `scripts/pack_contribution.py`. Then upload the single `.tar.gz` it produces
-        to any file host that gives a direct download link, and fill this in.
+        to a file host that gives a **true direct download link** and fill this in.
+
+        **Please prefer a real direct link** — Google Drive (Share → "Anyone
+        with the link"), Dropbox, or a plain `https://…/file.tar.gz` on your own
+        server. Some consumer transfer services (**swisstransfer, free.fr**)
+        hide the file behind a JavaScript click-through with no direct link, so
+        the maintainer has to fetch it by hand — please avoid those.
   - type: input
     id: link
     attributes:
       label: Download link
-      description: A direct download link to your .tar.gz bundle (Google Drive, Dropbox, WeTransfer, Proton Drive, your own server...).
+      description: A direct download link to your .tar.gz bundle (Google Drive "anyone with the link", Dropbox, your own server). Avoid swisstransfer/free.fr — they have no scriptable direct link.
       placeholder: https://...
     validations:
       required: true

@@ -190,11 +190,15 @@ On Windows:
 py scripts\pack_contribution.py shards\mine --handle your-github-name
 ```
 
-**4. Upload and open an issue.** Put the printed `.tar.gz` on any file host that
-gives a **direct download link** — Google Drive, Dropbox, WeTransfer, Proton
-Drive, your own server — then open a
+**4. Upload and open an issue.** Put the printed `.tar.gz` on a file host that
+gives a **true direct download link** — Google Drive (Share → "Anyone with
+the link"), Dropbox, or a plain `https://…/file.tar.gz` on your own server —
+then open a
 [Shard contribution issue](https://github.com/aurelienpierreeng/ansel-denoise/issues/new/choose)
 and paste the link (the form also asks you to confirm the license grant).
+Please avoid consumer transfer services like **swisstransfer** or **free.fr**:
+they hide the file behind a JavaScript click-through with no direct link, so
+the maintainer has to download it by hand.
 No extra tools, no git, nothing to install beyond what step 0 set up — the
 same command works on Linux, macOS and Windows.
 
