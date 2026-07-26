@@ -154,6 +154,9 @@ TMPDIR=/var/tmp python3 scripts/ingest_contribution.py \
 # 3. publish the merged shards to the release, then commit the registry
 ./scripts/publish_shards.sh shards/contrib/<github-login>
 git add contrib/registry.jsonl && git commit
+
+# 4. refresh the global shard count shown in the release notes
+python3 scripts/update_release_stats.py
 ```
 
 `ingest_contribution.py` is safe to run on any bundle (it no-ops the rename
@@ -165,6 +168,12 @@ end-to-end-encrypted flow that no script can fetch — `fetch_contribution.sh`
 names these and you download them by hand, then run step 2 on the local
 file. `collect_contribution.sh` deduplicates shards already on the release,
 so re-processing or overlapping bundles is harmless.
+
+`update_release_stats.py` counts the shards on the release (from its
+`published.txt`) and writes the total — with the archive-vs-community split —
+into a `<!-- STATS -->` block at the top of the release notes; it is
+idempotent, so re-run it after any publish (or on its own) to refresh the
+count.
 
 Paths and metadata resolve through `~/.config/ansel/library.db` (opened
 read-only); the ISO gate uses the library's own EXIF data. By default the
