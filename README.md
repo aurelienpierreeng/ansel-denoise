@@ -133,10 +133,38 @@ itself (TIFF tags + libraw, exiftool filling gaps when installed) — so a
 plain list of raw paths harvests on a machine that never ran Ansel.
 
 **Community contributions:** anyone can feed the corpus from their own Ansel
-library — see [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow
+library — see [CONTRIBUTING.md](CONTRIBUTING.md) for the contributor workflow
 (one-script setup, curation = lighttable selection, `pack_contribution.py`
-bundle, maintainer ingest via `collect_contribution.sh`, public bookkeeping
-in [`contrib/registry.jsonl`](contrib/registry.jsonl)).
+bundle, upload + open a 'Shard contribution' issue, public bookkeeping in
+[`contrib/registry.jsonl`](contrib/registry.jsonl)).
+
+*Maintainer side — processing a contribution issue:*
+
+```sh
+# 1. download the bundle from the issue's link (resolves Dropbox / Google
+#    Drive / Nextcloud direct links; refuses hosts that need a browser)
+./scripts/fetch_contribution.sh <issue-link> /var/tmp/bundle.tar.gz
+
+# 2. ingest it, correcting the handle to the contributor's GitHub login if
+#    they packed under the docs placeholder (renames shards + manifest,
+#    re-verifies hashes, then runs collect_contribution.sh)
+TMPDIR=/var/tmp python3 scripts/ingest_contribution.py \
+    /var/tmp/bundle.tar.gz <github-login> <issue-url>
+
+# 3. publish the merged shards to the release, then commit the registry
+./scripts/publish_shards.sh shards/contrib/<github-login>
+git add contrib/registry.jsonl && git commit
+```
+
+`ingest_contribution.py` is safe to run on any bundle (it no-ops the rename
+when the handle is already correct) and its per-file hash check rejects a
+corrupted or tampered bundle. Point `TMPDIR` at a real disk: contributions
+can exceed 1 GB and a small `/tmp` tmpfs will fill up. Some file hosts
+(swisstransfer, free.fr, Tresorit) hide the file behind a JavaScript or
+end-to-end-encrypted flow that no script can fetch — `fetch_contribution.sh`
+names these and you download them by hand, then run step 2 on the local
+file. `collect_contribution.sh` deduplicates shards already on the release,
+so re-processing or overlapping bundles is harmless.
 
 Paths and metadata resolve through `~/.config/ansel/library.db` (opened
 read-only); the ISO gate uses the library's own EXIF data. By default the
