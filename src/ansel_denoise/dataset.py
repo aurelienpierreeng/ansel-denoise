@@ -202,7 +202,7 @@ class RawTileDataset(Dataset):
         if split == "train":
             print(f"levels: rawspeed for {n_rs}/{len(self.records)} tiles "
                   f"({len(rs_cams)} cameras), libraw metadata for {len(lr_cams)} cameras "
-                  f"[{time.perf_counter() - t_lvl:.1f}s]")
+                  f"[{time.perf_counter() - t_lvl:.1f}s]", flush=True)
 
     def _tile(self, record_idx: int) -> np.ndarray:
         if self._tiles is None:
