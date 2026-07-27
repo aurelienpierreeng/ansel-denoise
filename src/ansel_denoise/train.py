@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import sys
 import time
 from pathlib import Path
 
@@ -138,8 +139,16 @@ def main(argv: list[str] | None = None) -> int:
     args.out.mkdir(parents=True, exist_ok=True)
     log = open(args.out / "train.log", "a", encoding="utf-8")
 
+    # Under a notebook/pipe (Colab, Kaggle) stdout is block-buffered, so log
+    # lines vanish into the buffer and the run looks hung for many minutes.
+    # Line-buffer stdout so every line appears immediately; say() flushes too.
+    try:
+        sys.stdout.reconfigure(line_buffering=True)
+    except (AttributeError, ValueError):
+        pass
+
     def say(msg: str) -> None:
-        print(msg)
+        print(msg, flush=True)
         log.write(msg + "\n")
         log.flush()
 
