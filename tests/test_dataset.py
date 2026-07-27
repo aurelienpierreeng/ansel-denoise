@@ -44,6 +44,21 @@ def test_shapes_and_channels(shard_dir):
     assert torch.isfinite(x).all() and torch.isfinite(y).all()
 
 
+def test_max_shards_caps_a_separate_cache(tmp_path):
+    from ansel_denoise.dataset import consolidate_tiles
+    for i in range(8):
+        _write_shard(tmp_path / f"s{i}.npz", BAYER_RGGB, f"Cam {i}")
+    _, _, full = consolidate_tiles(tmp_path)
+    _, _, capped = consolidate_tiles(tmp_path, max_shards=3)
+    assert len(full) == 8 * 4 and len(capped) == 3 * 4  # 4 tiles/shard in the fixture
+    # capped cache is a distinct file, so it never clobbers the full one
+    assert (tmp_path / ".tiles-cache.bin").exists()
+    assert (tmp_path / ".tiles-cache-max3.bin").exists()
+    # deterministic: same subset across calls (machine-independent hash order)
+    _, _, capped2 = consolidate_tiles(tmp_path, max_shards=3)
+    assert [r["camera"] for r in capped] == [r["camera"] for r in capped2]
+
+
 def test_val_is_deterministic_train_is_not(shard_dir):
     val = RawTileDataset(shard_dir, "val", patch=96)
     x1, y1 = val[0]

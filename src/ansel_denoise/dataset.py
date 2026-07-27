@@ -9,9 +9,19 @@ Tile storage: on first use the compressed shards are consolidated into one
 flat memory-mapped file next to them (.tiles-cache.bin/.json). Random tile
 sampling then costs a page-cache read instead of an npz decompression — an
 LRU of decompressed shards stops scaling around a few hundred shards (observed
-on Colab: 178 -> 78 patches/s), while the OS page cache handles the full
-~2000-shard harvest (~4 GB) shared across dataloader workers. The cache is
-fingerprinted against the shard listing and rebuilt when shards change.
+on Colab: 178 -> 78 patches/s), while the OS page cache holds the whole cache
+across dataloader workers. The cache is fingerprinted against the shard
+listing and rebuilt when shards change.
+
+The catch: fast random access needs the whole cache resident in RAM, and it
+grows ~2.1 MB/shard (~5 GB per 2500 shards). Past the box's RAM the page
+cache thrashes and throughput collapses (a 12.7 GB Colab/Kaggle T4 crawls
+above ~5000 shards). Pass `max_shards` to `consolidate_tiles` / the
+`RawTileDataset(max_shards=...)` / `train.py --max-shards` to train on a
+RAM-fitting deterministic subset. Bounding RAM while using the *whole*
+growing corpus would need a streaming shuffle-buffer dataset (sequential
+reads, bounded resident set) instead of one big random-access memmap — the
+next step once the corpus outgrows a single subset.
 
 Sample tensors (float32):
     input  (5, H, W): [noisy mosaic, R one-hot, G one-hot, B one-hot, sigma map]
@@ -64,16 +74,28 @@ def _fingerprint(shards: list[Path]) -> str:
     return h.hexdigest()
 
 
-def consolidate_tiles(shard_dir: Path) -> tuple[Path, int, list[dict]]:
+def consolidate_tiles(shard_dir: Path, max_shards: int | None = None) -> tuple[Path, int, list[dict]]:
     """Merge all shards into a flat uint16 tile file + per-tile records.
     Returns (bin path, tile size, records); reuses the existing cache when the
-    shard listing is unchanged."""
+    shard listing is unchanged.
+
+    The cache is one memmap the trainer expects the OS page cache to hold in
+    RAM for fast random access — it grows ~2.1 MB/shard (~5 GB per 2500 shards),
+    so on a RAM-limited box (Colab T4 ≈ 12.7 GB) a large corpus thrashes. Pass
+    `max_shards` to cap the working set to a deterministic, machine-independent
+    random subset (hash-ordered by name) that fits RAM; the capped cache lives
+    in its own file so it never clobbers the full one."""
     shard_dir = Path(shard_dir)
     shards = sorted(shard_dir.glob("*.npz"))
     if not shards:
         raise ValueError(f"no shards under {shard_dir}")
-    bin_path = shard_dir / ".tiles-cache.bin"
-    meta_path = shard_dir / ".tiles-cache.json"
+    if max_shards and len(shards) > max_shards:
+        # stable pseudo-random pick: order by md5(name), take N, restore name order
+        chosen = sorted(shards, key=lambda p: hashlib.md5(p.name.encode()).hexdigest())[:max_shards]
+        shards = sorted(chosen)
+    suffix = f"-max{max_shards}" if max_shards else ""
+    bin_path = shard_dir / f".tiles-cache{suffix}.bin"
+    meta_path = shard_dir / f".tiles-cache{suffix}.json"
     fp = _fingerprint(shards)
 
     if meta_path.exists():
@@ -126,6 +148,7 @@ class RawTileDataset(Dataset):
         deterministic: bool | None = None,
         levels: RawspeedLevels | None = None,
         level_jitter: bool = True,
+        max_shards: int | None = None,
     ):
         self.patch = patch
         self.split = split
@@ -137,7 +160,7 @@ class RawTileDataset(Dataset):
         self.exposure_push_ev = exposure_push_ev
         self.seed = seed
 
-        self.tiles_path, self.tile_size, self.records = consolidate_tiles(Path(shard_dir))
+        self.tiles_path, self.tile_size, self.records = consolidate_tiles(Path(shard_dir), max_shards)
         self.index = [i for i, r in enumerate(self.records) if camera_split(r["camera"]) == split]
         if not self.index:
             raise ValueError(f"no '{split}' tiles under {shard_dir}")

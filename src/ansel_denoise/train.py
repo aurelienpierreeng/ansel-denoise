@@ -109,6 +109,12 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--base", type=int, default=32, help="U-Net base width")
     ap.add_argument("--depth", type=int, default=4, help="U-Net depth")
     ap.add_argument("--workers", type=int, default=4)
+    ap.add_argument("--max-shards", type=int, default=None,
+                    help="cap training to a deterministic random subset of this many shards. "
+                         "The tile cache is one RAM-resident memmap (~2.1 MB/shard, ~5 GB per "
+                         "2500 shards); on a RAM-limited box (Colab T4 ≈ 12.7 GB) a bigger corpus "
+                         "thrashes the page cache and crawls. Cap it to ~2000 to fit. Omit for "
+                         "unlimited on a machine with enough RAM.")
     ap.add_argument("--device", default="auto")
     ap.add_argument("--val-every", type=int, default=2000)
     ap.add_argument("--ckpt-every", type=int, default=10_000)
@@ -140,12 +146,13 @@ def main(argv: list[str] | None = None) -> int:
     if args.patch % 2**args.depth:
         raise SystemExit(f"--patch must be a multiple of {2**args.depth} (depth {args.depth})")
 
-    train_set = RawTileDataset(args.shards, "train", patch=args.patch)
+    train_set = RawTileDataset(args.shards, "train", patch=args.patch, max_shards=args.max_shards)
     try:
-        val_set = RawTileDataset(args.shards, "val", patch=args.patch)
+        val_set = RawTileDataset(args.shards, "val", patch=args.patch, max_shards=args.max_shards)
     except ValueError:
         say("warning: no held-out-camera tiles; validating on training cameras")
-        val_set = RawTileDataset(args.shards, "train", patch=args.patch, deterministic=True)
+        val_set = RawTileDataset(args.shards, "train", patch=args.patch, deterministic=True,
+                                 max_shards=args.max_shards)
     say(f"tiles: {len(train_set)} train / {len(val_set)} val | device: {device}")
 
     train_loader = DataLoader(
