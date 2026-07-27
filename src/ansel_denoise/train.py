@@ -93,9 +93,19 @@ def validate_ema(model, ema: dict, loader, device, max_batches: int = 50) -> tup
 def rotate_checkpoints(out: Path, keep: int) -> None:
     """Delete the oldest numbered checkpoints beyond `keep`. A long run at a
     short --ckpt-every would otherwise fill the checkpoint volume (a free
-    Google Drive dies after ~150 checkpoints of a 7.6M-param model)."""
+    Google Drive dies after ~150 checkpoints of a 7.6M-param model).
+
+    On a Google Drive mount (Colab) a plain unlink only moves the file to
+    Drive's trash, which STILL counts against the quota — a long session then
+    bloats the account with tens of GB of "deleted" checkpoints. Truncate to
+    zero bytes first so the copy that lands in trash occupies no space; on a
+    normal filesystem this is just a harmless empty write before the delete."""
     numbered = sorted(out.glob("ckpt-0*.pt"))
     for stale in numbered[:-keep] if keep > 0 else []:
+        try:
+            stale.write_bytes(b"")  # 0-byte trash on Drive; no-op cost locally
+        except OSError:
+            pass
         stale.unlink()
 
 
