@@ -208,11 +208,19 @@ def main(argv: list[str] | None = None) -> int:
 
     model.train()
     t0, loss_acc, n_acc = time.time(), 0.0, 0
+    # data-vs-compute split: t_data is time blocked waiting for the loader to
+    # deliver a batch (high => GPU starved by the input pipeline, the classic
+    # "low GPU util, low vRAM, crawling" signature), t_compute is forward+
+    # backward+step. Reported alongside patches/s every 100 steps.
+    t_data, t_compute = 0.0, 0.0
+    t_prev = time.perf_counter()
     stalled = False
     while step < args.steps and not stalled:
         for x, y in train_loader:
+            t_data += time.perf_counter() - t_prev
             if step >= args.steps:
                 break
+            t_c = time.perf_counter()
             x, y = x.to(device, non_blocking=True), y.to(device, non_blocking=True)
             with torch.amp.autocast(device.type, enabled=device.type == "cuda"):
                 loss = torch.nn.functional.l1_loss(model(x), y)
@@ -225,6 +233,9 @@ def main(argv: list[str] | None = None) -> int:
             if ema is not None:
                 ema_update(ema, model, args.ema_decay, step)
             li = loss.item()
+            if device.type == "cuda":
+                torch.cuda.synchronize()  # so t_compute isn't understated by async kernels
+            t_compute += time.perf_counter() - t_c
             loss_acc += li
             n_acc += 1
 
@@ -245,10 +256,14 @@ def main(argv: list[str] | None = None) -> int:
                 return 1
 
             if step % 100 == 0:
-                rate = n_acc * args.batch / (time.time() - t0)
+                elapsed = time.time() - t0
+                rate = n_acc * args.batch / elapsed
+                data_pct = 100.0 * t_data / max(elapsed, 1e-9)
                 say(f"step {step:7d}  loss {loss_acc / n_acc:.5f}  {rate:.1f} patches/s"
-                    f"  lr {lr_now:.2e}")
+                    f"  lr {lr_now:.2e}  [data {data_pct:3.0f}% "
+                    f"{1000 * t_data / n_acc:.0f}ms/b | compute {1000 * t_compute / n_acc:.0f}ms/b]")
                 t0, loss_acc, n_acc = time.time(), 0.0, 0
+                t_data, t_compute = 0.0, 0.0
             if step % args.val_every == 0:
                 # the EMA weights are the shipping artifact: they drive the
                 # metric, the best-checkpoint gate and the early stop; the raw
@@ -268,6 +283,7 @@ def main(argv: list[str] | None = None) -> int:
                     stale_vals += 1
                 say(f"step {step:7d}  val PSNR {score:.2f} dB {detail}"
                     f"best {best_psnr:.2f}, stale {stale_vals})")
+                t_prev = time.perf_counter()  # don't bill validation time to t_data
                 if args.patience and stale_vals >= args.patience:
                     say(f"early stop at step {step}: {stale_vals} validations without improvement "
                         f"(best {best_psnr:.2f} dB, kept in ckpt-best.pt)")
@@ -277,6 +293,8 @@ def main(argv: list[str] | None = None) -> int:
                 save_checkpoint(args.out / f"ckpt-{step:08d}.pt", model, opt, step, best_psnr,
                                 stale_vals, ema)
                 rotate_checkpoints(args.out, args.keep_ckpts)
+                t_prev = time.perf_counter()  # don't bill checkpoint I/O to t_data
+            t_prev = time.perf_counter()
 
     # numbered checkpoint is the resume anchor (strictly increasing names);
     # ckpt-final.pt is a stable alias for the export step
