@@ -257,6 +257,13 @@ secrets with the committed version output as automatic fallback, plus a
 wall-clock budget so the save always beats the session kill. Between the
 two free tiers, a full 100k-step training fits in one week of quota.
 
+[notebooks/train_distilled.ipynb](notebooks/train_distilled.ipynb) is its
+twin for the **distilled** base-16 model (1.9M params — the CPU-path variant
+Ansel loads when OpenCL is unavailable). It is identical except `BASE = 16`
+and a distinct `RUN_NAME`, so the two can train side by side (e.g. one on
+Colab, one on Kaggle) without their checkpoints colliding; export the result
+as `--variant distilled`.
+
 Runs as-is on CPU (smoke test) or a single CUDA GPU (real training, 1–3 days
 on one consumer GPU); see [docs/cloud.md](docs/cloud.md) for the remote
 workflow. Validation PSNR is measured on **held-out cameras** (deterministic
