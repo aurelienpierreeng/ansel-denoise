@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import time
 from pathlib import Path
 
 import numpy as np
@@ -102,12 +103,22 @@ def consolidate_tiles(shard_dir: Path, max_shards: int | None = None) -> tuple[P
         meta = json.loads(meta_path.read_text())
         if meta.get("fingerprint") == fp and meta.get("version") == CACHE_VERSION \
                 and bin_path.exists():
+            print(f"tile cache: reusing {bin_path.name} "
+                  f"({bin_path.stat().st_size / 1e9:.1f} GB, {meta['count']} tiles)", flush=True)
             return bin_path, meta["tile_size"], meta["records"]
 
+    # one-time build: decode every shard and pack tiles into the flat memmap.
+    # Announced + timed because it reads the whole corpus (minutes on a big set)
+    # before step 1, and a silent multi-minute pause reads as a hang.
+    t_build = time.perf_counter()
+    print(f"tile cache: building from {len(shards)} shards "
+          f"(one-time, ~{len(shards) * 2.1 / 1000:.1f} GB expected)...", flush=True)
     records: list[dict] = []
     tile_size = None
     with open(bin_path, "wb") as out:
-        for shard in shards:
+        for i, shard in enumerate(shards):
+            if i and i % 500 == 0:
+                print(f"  ...{i}/{len(shards)} shards", flush=True)
             with np.load(shard) as z:
                 tiles = z["tiles"]
                 if tiles.shape[0] == 0:
@@ -131,6 +142,8 @@ def consolidate_tiles(shard_dir: Path, max_shards: int | None = None) -> tuple[P
         {"fingerprint": fp, "version": CACHE_VERSION, "tile_size": tile_size,
          "count": len(records), "records": records}
     ))
+    print(f"tile cache: built {bin_path.stat().st_size / 1e9:.1f} GB "
+          f"({len(records)} tiles) in {time.perf_counter() - t_build:.0f}s", flush=True)
     return bin_path, tile_size, records
 
 
@@ -175,6 +188,7 @@ class RawTileDataset(Dataset):
         levels = levels if levels is not None else RawspeedLevels()
         n_rs = 0
         rs_cams, lr_cams = set(), set()
+        t_lvl = time.perf_counter()
         for rec in self.records:
             rs = levels.lookup(rec["camera"], iso=rec.get("iso"), libraw_white=rec["white"])
             if rs is not None:
@@ -187,7 +201,8 @@ class RawTileDataset(Dataset):
                 lr_cams.add(rec["camera"])
         if split == "train":
             print(f"levels: rawspeed for {n_rs}/{len(self.records)} tiles "
-                  f"({len(rs_cams)} cameras), libraw metadata for {len(lr_cams)} cameras")
+                  f"({len(rs_cams)} cameras), libraw metadata for {len(lr_cams)} cameras "
+                  f"[{time.perf_counter() - t_lvl:.1f}s]")
 
     def _tile(self, record_idx: int) -> np.ndarray:
         if self._tiles is None:
