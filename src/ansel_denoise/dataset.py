@@ -39,7 +39,7 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
-from .cfa import aligned_offset, colors_map, one_hot
+from .cfa import aligned_offset, bin_for_pattern, colors_map, one_hot
 from .harvest import normalize_mosaic
 from .levels import RawspeedLevels
 from .noise import sigma_map, synthesize
@@ -162,7 +162,12 @@ class RawTileDataset(Dataset):
         levels: RawspeedLevels | None = None,
         level_jitter: bool = True,
         max_shards: int | None = None,
+        with_bin: bool = False,
     ):
+        # with_bin: additionally return the superpixel bin factor of the
+        # tile's CFA family (4 Bayer / 6 X-Trans) — the multi-scale trainer
+        # groups a batch by it before binning
+        self.with_bin = with_bin
         self.patch = patch
         self.split = split
         # val items are frozen (crop, flips, profile, noise) so metrics are
@@ -276,4 +281,6 @@ class RawTileDataset(Dataset):
 
         x = np.concatenate([noisy[None], one_hot(colors), sigma[None]], axis=0)
         y = clean.astype(np.float32)[None]
+        if self.with_bin:
+            return torch.from_numpy(x), torch.from_numpy(y), bin_for_pattern(pattern)
         return torch.from_numpy(x), torch.from_numpy(y)
