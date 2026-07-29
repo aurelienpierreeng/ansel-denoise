@@ -1,16 +1,16 @@
 {
  "models": {
   "rawdenoiseai-v1-distilled.anselnn": {
-   "revision": 1,
-   "sha256": "bebbbe799111a077e863f0fa76d157c1396b31efb88b6d1ad14f7b7e77d4fb12",
+   "revision": 2,
+   "sha256": "4a96188ffc26d8860da225978c0530624f56c64a31ab1895b3033e51e0dc4a6a",
    "size": 7597369,
-   "updated": "2026-07-18"
+   "updated": "2026-07-29"
   },
   "rawdenoiseai-v1-full.anselnn": {
-   "revision": 2,
-   "sha256": "b48d125486f638da30dbb690b8b11d19c7ac8c49d69eb1c90bf9bf83cb915998",
+   "revision": 3,
+   "sha256": "412d0086b9e989f64cef310823bf5c2305bf19a8b575a2d8a0be92aa5ca3a310",
    "size": 30353804,
-   "updated": "2026-07-18"
+   "updated": "2026-07-29"
   }
  }
 }
