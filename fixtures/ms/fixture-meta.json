@@ -20,15 +20,14 @@
   },
   "guide": "coarse-rgb-nearest",
   "sigma_calibration": {
-   "variance_scale": 4.0,
    "channel_sigma_scale": [
-    1.66,
-    2.0,
-    1.48
+    3.32,
+    4.0,
+    2.96
    ]
   }
  },
- "model_sha256": "9ef8d11cad375c3bf9f9e2acd1c535651b517e36da4fecbe3700ba7d89c66459",
+ "model_sha256": "1a059c7b52b67165c15ab8a5b93eb71bd2dc0c7dc5e1d33dfbf708cd9e1f3635",
  "tolerance_abs": 0.0002,
  "bin": 4,
  "base_planes_sha256": "4cadaf1109bf44e549830b8aec2247e04fafe2a4c42eba71eb50087c9f539a7b",
