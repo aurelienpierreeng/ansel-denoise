@@ -128,8 +128,9 @@ class ProfileSampler:
 # the profiling tool's lifting-Haar normalization (std(HH) = sigma/2 for iid
 # noise, squared into the (a, b) fit uncorrected), times the demosaic
 # high-frequency attenuation measured on flat regions of real raws vs the
-# profile prediction (medians over 64 images, 3 cameras, ISO 64-12800; a
-# 393-camera raw.pixls.us sweep refines these). Training synthesis and the
+# profile prediction (cross-camera medians of the 253-camera
+# raw.pixls.us sweep, bench/rpu-sweep-calibration.csv, estimator-bias
+# corrected; ISO-stable per the 64-image local study). Training synthesis and the
 # sigma conditioning must share this convention with the C inference side —
 # the constant also ships inside the exported model cfg.
-DEFAULT_SIGMA_CALIBRATION = (2.0 * 1.66, 2.0 * 2.00, 2.0 * 1.48)
+DEFAULT_SIGMA_CALIBRATION = (2.0 * 1.41, 2.0 * 1.97, 2.0 * 1.48)
