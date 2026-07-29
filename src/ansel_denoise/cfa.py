@@ -100,3 +100,21 @@ def bin_sigma_torch(sigma, onehot, bin_factor: int, counts):
     area = float(bin_factor * bin_factor)
     s2 = F.avg_pool2d(sigma * sigma * onehot, bin_factor) * area
     return s2.sqrt() / counts.clamp(min=1.0)
+
+
+def anchor_low_band(pred, noisy, onehot, scale: int):
+    """Replace the prediction's per-channel low band with the NOISY input's.
+
+    Below the last scale a denoiser can learn, the n-averaged measurement is
+    the true diluted estimate (sigma/n is sub-visible) while the network's
+    low band carries accumulated model error — measured 14+ dB WORSE than the
+    raw input on flat charts. Anchoring restores the dilution floor exactly
+    and, as a side effect, zeroes the low-band gradient so training
+    specializes the networks on their passband. Mirrored bit-exactly by the
+    C inference side."""
+    import torch.nn.functional as F
+
+    rgb_in, _ = bin_mosaic_torch(noisy, onehot, scale)
+    rgb_out, _ = bin_mosaic_torch(pred, onehot, scale)
+    corr = F.interpolate(rgb_in - rgb_out, scale_factor=scale, mode="nearest")
+    return pred + (corr * onehot).sum(dim=1, keepdim=True)

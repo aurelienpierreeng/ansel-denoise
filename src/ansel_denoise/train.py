@@ -19,7 +19,7 @@ from pathlib import Path
 import torch
 from torch.utils.data import DataLoader
 
-from .cfa import bin_mosaic_torch, bin_sigma_torch
+from .cfa import anchor_low_band, bin_mosaic_torch, bin_sigma_torch
 from .dataset import RawTileDataset
 from .metrics import lfce
 from .model import MSUNet, build_model, count_params
@@ -90,7 +90,11 @@ def ms_forward(model, x, bins, guide_net=None):
             continue
         c_in, _ = coarse_planes(noisy[idx], onehot[idx], sigma[idx], bf)
         guide = upsample_guide(coarse(c_in), bf)
-        pred[idx] = model.fine(torch.cat([x[idx], guide], dim=1))
+        out = model.fine(torch.cat([x[idx], guide], dim=1))
+        anchor = model.cfg.get("anchor", 0)
+        if anchor:
+            out = anchor_low_band(out, noisy[idx], onehot[idx], anchor)
+        pred[idx] = out
     return pred
 
 
@@ -175,10 +179,15 @@ def ms_step(model, guide_net, x, y, bins, opt_coarse, opt_fine,
     # --- fine update
     opt_fine.zero_grad(set_to_none=True)
     loss_fine = torch.zeros((), device=device)
+    anchor = model.cfg.get("anchor", 0)
     for (bf, idx, _), (_, weight, f_in) in zip(groups, fine_inputs):
         with torch.amp.autocast(device.type, enabled=device.type == "cuda"):
-            loss_fine = loss_fine + weight * fine_loss(model.fine(f_in), y[idx],
-                                                       onehot[idx], bf)
+            out = model.fine(f_in)
+            if anchor:
+                # anchored band has zero gradient: the fine net specializes
+                # on the passband above the anchor scale
+                out = anchor_low_band(out, noisy[idx], onehot[idx], anchor)
+            loss_fine = loss_fine + weight * fine_loss(out, y[idx], onehot[idx], bf)
     scaler_fine.scale(loss_fine).backward()
     scaler_fine.step(opt_fine)
     scaler_fine.update()

@@ -114,6 +114,7 @@ class MSUNet(nn.Module):
                      "out_channels": OUT_CHANNELS},
             "bin": {"bayer": 4, "xtrans": 6},
             "guide": "coarse-rgb-nearest",
+            "anchor": 32,
         }
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:

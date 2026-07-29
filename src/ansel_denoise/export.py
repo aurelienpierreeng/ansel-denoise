@@ -37,6 +37,7 @@ def load_model(ckpt_path: Path, raw_weights: bool = False):
         # drift apart (channel_sigma_scale = TOTAL per-channel multiplier)
         from .profiles import DEFAULT_SIGMA_CALIBRATION
 
+        cfg.setdefault("anchor", 32)
         cfg.setdefault("sigma_calibration",
                        {"channel_sigma_scale": list(DEFAULT_SIGMA_CALIBRATION)})
     else:
