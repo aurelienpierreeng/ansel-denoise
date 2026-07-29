@@ -89,8 +89,9 @@ class ProfileSampler:
     def __init__(
         self,
         cameras: list[CameraProfile] | None = None,
-        jitter: float = 1.25,
+        jitter: float = 2.0,
         holdout: set[str] | None = None,
+        sigma_calibration: tuple[float, float, float] | None = "default",
     ):
         cameras = cameras if cameras is not None else load_profiles()
         holdout = holdout or set()
@@ -98,6 +99,17 @@ class ProfileSampler:
         if not self.cameras:
             raise ValueError("no cameras left after holdout filter")
         self.jitter = float(jitter)
+        # The DB (a, b) understate the physical mosaic-domain variance (see
+        # DEFAULT_SIGMA_CALIBRATION below): synthesis must be centered on the
+        # TRUTH so that calibration-corrected inference sigma is
+        # in-distribution by construction. None turns the correction off
+        # (pre-calibration behavior, for regression comparisons only).
+        if sigma_calibration == "default":
+            sigma_calibration = DEFAULT_SIGMA_CALIBRATION
+        self.variance_calibration = (
+            np.asarray(sigma_calibration, dtype=np.float64) ** 2
+            if sigma_calibration is not None else np.ones(3)
+        )
 
     def sample(self, rng: np.random.Generator) -> tuple[np.ndarray, np.ndarray, dict]:
         cam = self.cameras[rng.integers(len(self.cameras))]
@@ -105,8 +117,9 @@ class ProfileSampler:
         iso = float(np.exp(rng.uniform(np.log(lo), np.log(max(hi, lo + 1e-3)))))
         prof = cam.interpolate(iso)
         j = self.jitter
-        a = prof.a * np.exp(rng.uniform(-np.log(j), np.log(j), size=3))
-        b = prof.b * np.exp(rng.uniform(-np.log(j), np.log(j), size=3))
+        cal = self.variance_calibration
+        a = prof.a * cal * np.exp(rng.uniform(-np.log(j), np.log(j), size=3))
+        b = prof.b * cal * np.exp(rng.uniform(-np.log(j), np.log(j), size=3))
         return a, b, {"camera": cam.name, "iso": iso}
 
 

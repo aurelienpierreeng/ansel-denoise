@@ -266,7 +266,12 @@ class RawTileDataset(Dataset):
             a = a * 1e-3
             b = b * 1e-3
         black_frac = black_scalar / max(white, 1.0)
-        noisy = synthesize(clean, colors, a, b, rng, black_frac=black_frac)
+        # one ADU in the normalized domain: real raws are quantized, and at
+        # the calibration-corrected read-noise floors the quantization is a
+        # visible part of the shadow statistics
+        quant_step = 1.0 / max(white - black_scalar, 1.0)
+        noisy = synthesize(clean, colors, a, b, rng, black_frac=black_frac,
+                           quant_step=quant_step)
         sigma = sigma_map(noisy, colors, a, b)
 
         x = np.concatenate([noisy[None], one_hot(colors), sigma[None]], axis=0)
