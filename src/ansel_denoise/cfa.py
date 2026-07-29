@@ -59,12 +59,15 @@ def aligned_offset(rng: np.random.Generator, extent: int, crop: int, period: int
 
 
 def bin_for_pattern(pattern: np.ndarray) -> int:
-    """Superpixel bin factor for the coarse (low-frequency) stage: 4 for the
-    2x2 Bayer period (a 4x4 sensor block holds 4 R, 8 G, 4 B sites), 6 for
-    the 6x6 X-Trans period (8 R, 20 G, 8 B). Any bin must keep every channel
-    represented in every block, so the factor is tied to the CFA period."""
-    shape = normalize_pattern(pattern).shape
-    if shape == (2, 2):
+    """Superpixel bin factor for the coarse (low-frequency) stage: 4 for
+    periods dividing 4 — plain 2x2 Bayer (a 4x4 sensor block holds 4 R, 8 G,
+    4 B sites) and 4x4 quad-Bayer-class sensors (one full period per block) —
+    and 6 for the 6x6 X-Trans period (8 R, 20 G, 8 B). Any bin must keep
+    every channel represented in every block, so the factor is tied to the
+    CFA period."""
+    p = normalize_pattern(pattern)
+    shape = p.shape
+    if shape in ((2, 2), (4, 4)) and {0, 1, 2} <= set(p.flatten().tolist()):
         return 4
     if shape == (6, 6):
         return 6

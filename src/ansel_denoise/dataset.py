@@ -180,6 +180,22 @@ class RawTileDataset(Dataset):
 
         self.tiles_path, self.tile_size, self.records = consolidate_tiles(Path(shard_dir), max_shards)
         self.index = [i for i, r in enumerate(self.records) if camera_split(r["camera"]) == split]
+        if self.with_bin:
+            # multi-scale training needs a superpixel bin factor per tile;
+            # filter out (rare, exotic) CFA periods without one instead of
+            # crashing a worker mid-run
+            def _binnable(rec) -> bool:
+                try:
+                    bin_for_pattern(np.asarray(rec["pattern"], dtype=np.uint8))
+                    return True
+                except ValueError:
+                    return False
+
+            before = len(self.index)
+            self.index = [i for i in self.index if _binnable(self.records[i])]
+            if before != len(self.index):
+                print(f"multi-scale: skipped {before - len(self.index)} tiles with "
+                      f"unsupported CFA periods")
         if not self.index:
             raise ValueError(f"no '{split}' tiles under {shard_dir}")
         self._tiles: np.memmap | None = None  # opened lazily, once per worker process
