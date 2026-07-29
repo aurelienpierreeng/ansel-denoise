@@ -40,10 +40,12 @@ from ansel_denoise.cfa import BAYER_RGGB, colors_map, one_hot  # noqa: E402
 from ansel_denoise.export import load_model_from_anselnn  # noqa: E402
 from ansel_denoise.metrics import LFCE_BINS, lfce, psnr  # noqa: E402
 from ansel_denoise.profiles import DEFAULT_SIGMA_CALIBRATION, load_profiles  # noqa: E402
+from ansel_denoise.cfa import bin_for_pattern  # noqa: E402
+from ansel_denoise.train import ms_forward  # noqa: E402
 
 SEED = 20260729
 N_TILES = 32
-TILE = 256
+TILE = 192  # lcm-safe for both CFA bins x coarse stride pyramid (multiple of 96)
 CAMERAS = ["Nikon D850", "Sony ILCE-1", "Canon EOS 5D Mark III"]
 ISOS = [3200.0, 12800.0, 51200.0]
 
@@ -58,7 +60,7 @@ def collect_tiles(shards_dir: Path, rng: np.random.Generator):
     for i in sorted(picks):
         with np.load(paths[i], allow_pickle=False) as z:
             t = int(rng.integers(z["tiles"].shape[0]))
-            raw = z["tiles"][t].astype(np.float32)
+            raw = z["tiles"][t][:TILE, :TILE].astype(np.float32)
             black = float(np.mean(z["black_per_channel"]))
             white = float(z["white"])
             oy, ox = (int(v) for v in z["offsets"][t])
@@ -98,14 +100,18 @@ def corrected_ab(cam, iso):
     return prof.a * cal2, prof.b * cal2
 
 
-def run_model(model, clean, colors, a, b, rng, device):
+def run_model(model, clean, colors, a, b, rng, device, bin_factor=4):
     noisy = noise_mod.synthesize(clean, colors, a, b, rng, black_frac=0.03)
     sigma = noise_mod.sigma_map(noisy, colors, a, b)
     oh = one_hot(colors)
     x = np.concatenate([noisy[None], oh, sigma[None]]).astype(np.float32)
     with torch.no_grad():
         xt = torch.from_numpy(x[None]).to(device)
-        pred = model(xt).clamp(0.0, 1.0)
+        if getattr(model, "cfg", {}).get("arch") == "unet-ms":
+            bins = torch.tensor([bin_factor], device=device)
+            pred = ms_forward(model, xt, bins).clamp(0.0, 1.0)
+        else:
+            pred = model(xt).clamp(0.0, 1.0)
     ct = torch.from_numpy(clean[None, None]).to(device)
     nt = torch.from_numpy(noisy[None, None]).to(device)
     oht = torch.from_numpy(oh[None]).to(device)
@@ -143,7 +149,11 @@ def main():
                    **{f"lfce_{n}": [] for n in LFCE_BINS},
                    **{f"lfce_noisy_{n}": [] for n in LFCE_BINS}}
             for clean, colors in tiles:
-                r = run_model(model, clean, colors, a, b, nrng, args.device)
+                try:  # 2x2-periodic (Bayer-class) tile -> bin 4, else X-Trans -> 6
+                    tile_bin = bin_for_pattern(colors[:2, :2])
+                except ValueError:
+                    tile_bin = 6
+                r = run_model(model, clean, colors, a, b, nrng, args.device, tile_bin)
                 agg["psnr"].append(r["psnr"])
                 agg["psnr_noisy"].append(r["psnr_noisy"])
                 for n in LFCE_BINS:
