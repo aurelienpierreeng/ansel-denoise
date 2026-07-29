@@ -86,3 +86,14 @@ def bin_mosaic_torch(mosaic, onehot, bin_factor: int):
     sums = F.avg_pool2d(mosaic * onehot, bin_factor) * area
     counts = F.avg_pool2d(onehot, bin_factor) * area
     return sums / counts.clamp(min=1.0), counts
+
+
+def bin_sigma_torch(sigma, onehot, bin_factor: int, counts):
+    """Coarse sigma from the fine sigma plane: the variance of the mean of n
+    sensels is mean(sigma_i^2) / n, i.e. sigma_c = sqrt(sum(sigma^2)) / n.
+    sigma (B, 1, H, W), onehot (B, 3, H, W), counts from bin_mosaic_torch."""
+    import torch.nn.functional as F
+
+    area = float(bin_factor * bin_factor)
+    s2 = F.avg_pool2d(sigma * sigma * onehot, bin_factor) * area
+    return s2.sqrt() / counts.clamp(min=1.0)

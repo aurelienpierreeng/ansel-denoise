@@ -87,3 +87,35 @@ def test_sigma_map_matches_model():
         assert np.allclose(s[colors == c], np.sqrt(a[c] * 0.5 + b[c]), rtol=1e-5)
     # negative values must not produce NaNs
     assert np.isfinite(sigma_map(np.full((4, 4), -0.02, np.float32), colors[:4, :4], a, b)).all()
+
+
+def test_synthesize_binned_variance():
+    """Var of the binned synthesis matches (a*mean + b)/n within 2%."""
+    import numpy as np
+
+    from ansel_denoise.noise import synthesize_binned
+
+    rng = np.random.default_rng(5)
+    a = np.array([2e-4, 1e-4, 3e-4])
+    b = np.array([1e-6, 2e-6, 1.5e-6])
+    n = np.array([4, 8, 4])
+    clean = np.full((3, 200, 200), 0.3)
+    noisy = synthesize_binned(clean, a, b, n, rng)
+    for c in range(3):
+        want = (a[c] * 0.3 + b[c]) / n[c]
+        got = float(np.var(noisy[c] - clean[c]))
+        assert abs(got / want - 1.0) < 0.02
+
+
+def test_synthesize_quant_step_quantizes():
+    """With quant_step set, mosaic synthesis lands on exact ADU levels."""
+    import numpy as np
+
+    from ansel_denoise.noise import synthesize
+
+    clean = np.full((32, 32), 0.05, np.float32)
+    colors = np.zeros((32, 32), np.uint8)
+    noisy = synthesize(clean, colors, np.array([1e-5] * 3), np.array([1e-8] * 3),
+                       np.random.default_rng(2), quant_step=1.0 / 4000)
+    adu = noisy * 4000.0
+    assert np.allclose(adu, np.round(adu), atol=1e-3)
