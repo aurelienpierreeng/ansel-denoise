@@ -198,6 +198,21 @@ has to repeat the multi-day harvest (the git history itself stays lean):
 ./scripts/fetch_shards.sh shards/rpu         # restore / fast path on a fresh training box
 ```
 
+`measure_profile_bias.py` measures, on real raw files, how much a camera's
+shipped noise profile deviates from the true mosaic-domain noise (flat-block
+MAD estimator, validated on synthetic Poisson-Gaussian data; verbose per-file
+mode, or `--csv < paths.txt` for batch calibration with a pooled summary). It
+produced the calibration hard-coded in Ansel's `rawdenoiseai` module — the
+profiles understate physical sigma by ~2.2–4× (an exact ×2 from the
+lifting-Haar normalization in the profiling tool, times a channel-dependent
+demosaic-averaging loss, worst on green) — and is the tool to re-run when
+adding cameras or revisiting those defaults:
+
+```sh
+python3 scripts/measure_profile_bias.py file.NEF          # verbose, per bin
+python3 scripts/measure_profile_bias.py --csv < list.txt  # batch calibration
+```
+
 `publish_shards.sh` packs only not-yet-published shards into ≤1.8 GB tarballs
 (GitHub caps assets at 2 GiB) under the `shards-v1` release, and keeps a
 `published.txt` index plus the latest `ledger.jsonl` alongside them. Re-run it
