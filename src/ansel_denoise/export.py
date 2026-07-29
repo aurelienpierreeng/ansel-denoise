@@ -26,8 +26,21 @@ from .model import build_model
 
 def load_model(ckpt_path: Path, raw_weights: bool = False):
     ckpt = torch.load(ckpt_path, map_location="cpu")
-    cfg = ckpt["cfg"]
-    model = build_model(base=cfg["base"], depth=cfg["depth"])
+    cfg = dict(ckpt["cfg"])
+    if cfg.get("arch") == "unet-ms":
+        from .model import MSUNet
+
+        model = MSUNet(coarse_base=cfg["coarse"]["base"], coarse_depth=cfg["coarse"]["depth"],
+                       fine_base=cfg["fine"]["base"], fine_depth=cfg["fine"]["depth"])
+        # the sigma convention the run synthesized with ships INSIDE the
+        # artifact: the C side reads it so model and conditioning can never
+        # drift apart (channel_sigma_scale = TOTAL per-channel multiplier)
+        from .profiles import DEFAULT_SIGMA_CALIBRATION
+
+        cfg.setdefault("sigma_calibration",
+                       {"channel_sigma_scale": list(DEFAULT_SIGMA_CALIBRATION)})
+    else:
+        model = build_model(base=cfg["base"], depth=cfg["depth"])
     # the EMA weights are the shipping artifact when the run maintained them
     weights = ckpt["model"] if raw_weights or "ema" not in ckpt else ckpt["ema"]
     model.load_state_dict(weights)
@@ -67,6 +80,9 @@ def main(argv: list[str] | None = None) -> int:
     print(f"{out} ({size / 1e6:.1f} MB, step {step}, {which} weights, cfg {cfg})")
 
     if args.onnx:
+        if cfg.get("arch") == "unet-ms":
+            print("ONNX export is single-net only; skipping for unet-ms")
+            return 0
         dummy = torch.zeros(1, cfg["in_channels"], 128, 128)
         torch.onnx.export(
             model, dummy, str(args.onnx), input_names=["input"], output_names=["output"],
