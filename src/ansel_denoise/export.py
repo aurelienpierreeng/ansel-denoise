@@ -78,3 +78,41 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+
+def read_anselnn(path):
+    """Parse an .anselnn file back into (cfg, {name: np.ndarray}).
+
+    Inverse of write_anselnn — used by benchmarks and round-trip tests so a
+    shipped artifact can be evaluated in torch exactly as the C executor
+    sees it.
+    """
+    import numpy as np
+
+    data = Path(path).read_bytes()
+    if data[:8] != b"ANSELDN1":
+        raise ValueError(f"{path}: not an .anselnn file")
+    hlen = struct.unpack("<I", data[8:12])[0]
+    header = json.loads(data[12:12 + hlen].decode())
+    payload = data[12 + hlen:]
+    tensors = {}
+    for t in header["tensors"]:
+        arr = np.frombuffer(payload, dtype=np.float32,
+                            count=t["size"] // 4, offset=t["offset"])
+        tensors[t["name"]] = arr.copy().reshape(t["shape"])
+    return header["cfg"], tensors
+
+
+def load_model_from_anselnn(path):
+    """Instantiate the torch model matching an .anselnn file and load its
+    weights. Only arch 'unet' for now; 'unet-ms' lands with MSUNet."""
+    from .model import UNet
+
+    cfg, tensors = read_anselnn(path)
+    if cfg.get("arch") != "unet":
+        raise ValueError(f"unsupported arch {cfg.get('arch')!r}")
+    model = UNet(base=cfg["base"], depth=cfg["depth"])
+    state = {k: torch.from_numpy(v) for k, v in tensors.items()}
+    model.load_state_dict(state)
+    model.eval()
+    return model, cfg

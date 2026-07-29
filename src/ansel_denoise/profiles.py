@@ -108,3 +108,15 @@ class ProfileSampler:
         a = prof.a * np.exp(rng.uniform(-np.log(j), np.log(j), size=3))
         b = prof.b * np.exp(rng.uniform(-np.log(j), np.log(j), size=3))
         return a, b, {"camera": cam.name, "iso": iso}
+
+
+# Measured deviation between the shipped noise profiles and the true
+# mosaic-domain sigma, in sigma units per RGB channel: an exact factor 2 from
+# the profiling tool's lifting-Haar normalization (std(HH) = sigma/2 for iid
+# noise, squared into the (a, b) fit uncorrected), times the demosaic
+# high-frequency attenuation measured on flat regions of real raws vs the
+# profile prediction (medians over 64 images, 3 cameras, ISO 64-12800; a
+# 393-camera raw.pixls.us sweep refines these). Training synthesis and the
+# sigma conditioning must share this convention with the C inference side —
+# the constant also ships inside the exported model cfg.
+DEFAULT_SIGMA_CALIBRATION = (2.0 * 1.66, 2.0 * 2.00, 2.0 * 1.48)
