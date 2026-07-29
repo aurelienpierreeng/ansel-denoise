@@ -105,13 +105,22 @@ def read_anselnn(path):
 
 def load_model_from_anselnn(path):
     """Instantiate the torch model matching an .anselnn file and load its
-    weights. Only arch 'unet' for now; 'unet-ms' lands with MSUNet."""
-    from .model import UNet
+    weights bit-exactly ('unet' and 'unet-ms')."""
+    from .model import MSUNet, UNet
 
     cfg, tensors = read_anselnn(path)
-    if cfg.get("arch") != "unet":
-        raise ValueError(f"unsupported arch {cfg.get('arch')!r}")
-    model = UNet(base=cfg["base"], depth=cfg["depth"])
+    arch = cfg.get("arch")
+    if arch == "unet":
+        model = UNet(base=cfg["base"], depth=cfg["depth"],
+                     in_channels=cfg.get("in_channels", 5),
+                     out_channels=cfg.get("out_channels", 1))
+    elif arch == "unet-ms":
+        model = MSUNet(coarse_base=cfg["coarse"]["base"],
+                       coarse_depth=cfg["coarse"]["depth"],
+                       fine_base=cfg["fine"]["base"],
+                       fine_depth=cfg["fine"]["depth"])
+    else:
+        raise ValueError(f"unsupported arch {arch!r}")
     state = {k: torch.from_numpy(v) for k, v in tensors.items()}
     model.load_state_dict(state)
     model.eval()
