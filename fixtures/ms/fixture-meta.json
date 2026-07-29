@@ -1,0 +1,58 @@
+{
+ "n": 192,
+ "cfg": {
+  "arch": "unet-ms",
+  "coarse": {
+   "base": 32,
+   "depth": 3,
+   "in_channels": 6,
+   "out_channels": 3
+  },
+  "fine": {
+   "base": 32,
+   "depth": 4,
+   "in_channels": 8,
+   "out_channels": 1
+  },
+  "bin": {
+   "bayer": 4,
+   "xtrans": 6
+  },
+  "guide": "coarse-rgb-nearest",
+  "sigma_calibration": {
+   "channel_sigma_scale": [
+    3.32,
+    4.0,
+    2.96
+   ]
+  }
+ },
+ "model_sha256": "1a059c7b52b67165c15ab8a5b93eb71bd2dc0c7dc5e1d33dfbf708cd9e1f3635",
+ "tolerance_abs": 0.0002,
+ "bin": 4,
+ "base_planes_sha256": "4cadaf1109bf44e549830b8aec2247e04fafe2a4c42eba71eb50087c9f539a7b",
+ "coarse_input_sha256": "a961fad5a8d70b7e9f0b534e2f2f09d67e108135f7da8e888135692e58320f70",
+ "coarse_expected_sha256": "fcae787fb685551bf141b6cf400ac65c5c8496fc18e3ce776b70abf342d48f60",
+ "input_sha256": "4c83b6f09c2d6ad073dc64e434aa8cdc1195ecc5a6629ef5bc92ee577017616a",
+ "expected_sha256": "4c51a5d738d6dcd897bc5e9bfc6a92536c1d911c8659804cef044526b9231e53",
+ "tolerance_bin_abs": 1e-06,
+ "tolerance_end_to_end_abs": 0.0005,
+ "input_planes": [
+  "mosaic",
+  "onehot_R",
+  "onehot_G",
+  "onehot_B",
+  "sigma",
+  "guide_R",
+  "guide_G",
+  "guide_B"
+ ],
+ "coarse_planes": [
+  "R",
+  "G",
+  "B",
+  "sigma_R",
+  "sigma_G",
+  "sigma_B"
+ ]
+}

@@ -8,7 +8,8 @@ propagates to every fresh build automatically (a stale local copy fails the
 hash check and is re-fetched).
 
 Publishing rules:
-  - filenames are rawdenoiseai-<version>-<variant>.anselnn and never change
+  - filenames are denoise-<size>-<scale>-<version>.anselnn and never change
+    (size: large|half|quarter; scale: single|multi)
     for a given (version, variant);
   - during R&D a (version, variant) MAY be overridden: the manifest's
     revision counter bumps so consumers can see churn; commit the update
@@ -19,7 +20,7 @@ Publishing rules:
     of users' existing edits, which the version parameter exists to prevent.
 
 Usage:
-    python3.12 scripts/publish_model.py path/to/model.anselnn --version v1 --variant full
+    python3.12 scripts/publish_model.py path/to/model.anselnn --version v1 --size large --scale multi
 Then commit models/ normally and push.
 """
 
@@ -39,7 +40,8 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("model", type=Path, help="trained .anselnn file to publish")
     ap.add_argument("--version", required=True, help="model version tag, e.g. v1")
-    ap.add_argument("--variant", required=True, choices=["full", "distilled"])
+    ap.add_argument("--size", required=True, choices=["large", "half", "quarter"])
+    ap.add_argument("--scale", required=True, choices=["single", "multi"])
     args = ap.parse_args()
 
     blob = args.model.read_bytes()
@@ -47,7 +49,7 @@ def main() -> int:
         sys.exit(f"{args.model} is not an ANSELDN1 model file")
 
     MODELS.mkdir(exist_ok=True)
-    name = f"rawdenoiseai-{args.version}-{args.variant}.anselnn"
+    name = f"denoise-{args.size}-{args.scale}-{args.version}.anselnn"
     manifest_path = MODELS / "manifest.json"
     manifest = json.loads(manifest_path.read_text()) if manifest_path.exists() else {"models": {}}
 

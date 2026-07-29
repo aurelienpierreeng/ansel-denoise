@@ -39,7 +39,7 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
-from .cfa import aligned_offset, colors_map, one_hot
+from .cfa import aligned_offset, bin_for_pattern, colors_map, one_hot
 from .harvest import normalize_mosaic
 from .levels import RawspeedLevels
 from .noise import sigma_map, synthesize
@@ -162,7 +162,12 @@ class RawTileDataset(Dataset):
         levels: RawspeedLevels | None = None,
         level_jitter: bool = True,
         max_shards: int | None = None,
+        with_bin: bool = False,
     ):
+        # with_bin: additionally return the superpixel bin factor of the
+        # tile's CFA family (4 Bayer / 6 X-Trans) — the multi-scale trainer
+        # groups a batch by it before binning
+        self.with_bin = with_bin
         self.patch = patch
         self.split = split
         # val items are frozen (crop, flips, profile, noise) so metrics are
@@ -175,6 +180,22 @@ class RawTileDataset(Dataset):
 
         self.tiles_path, self.tile_size, self.records = consolidate_tiles(Path(shard_dir), max_shards)
         self.index = [i for i, r in enumerate(self.records) if camera_split(r["camera"]) == split]
+        if self.with_bin:
+            # multi-scale training needs a superpixel bin factor per tile;
+            # filter out (rare, exotic) CFA periods without one instead of
+            # crashing a worker mid-run
+            def _binnable(rec) -> bool:
+                try:
+                    bin_for_pattern(np.asarray(rec["pattern"], dtype=np.uint8))
+                    return True
+                except ValueError:
+                    return False
+
+            before = len(self.index)
+            self.index = [i for i in self.index if _binnable(self.records[i])]
+            if before != len(self.index):
+                print(f"multi-scale: skipped {before - len(self.index)} tiles with "
+                      f"unsupported CFA periods")
         if not self.index:
             raise ValueError(f"no '{split}' tiles under {shard_dir}")
         self._tiles: np.memmap | None = None  # opened lazily, once per worker process
@@ -266,9 +287,16 @@ class RawTileDataset(Dataset):
             a = a * 1e-3
             b = b * 1e-3
         black_frac = black_scalar / max(white, 1.0)
-        noisy = synthesize(clean, colors, a, b, rng, black_frac=black_frac)
+        # one ADU in the normalized domain: real raws are quantized, and at
+        # the calibration-corrected read-noise floors the quantization is a
+        # visible part of the shadow statistics
+        quant_step = 1.0 / max(white - black_scalar, 1.0)
+        noisy = synthesize(clean, colors, a, b, rng, black_frac=black_frac,
+                           quant_step=quant_step)
         sigma = sigma_map(noisy, colors, a, b)
 
         x = np.concatenate([noisy[None], one_hot(colors), sigma[None]], axis=0)
         y = clean.astype(np.float32)[None]
+        if self.with_bin:
+            return torch.from_numpy(x), torch.from_numpy(y), bin_for_pattern(pattern)
         return torch.from_numpy(x), torch.from_numpy(y)

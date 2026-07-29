@@ -92,3 +92,44 @@ def sigma_map(noisy: np.ndarray, colors: np.ndarray, a: np.ndarray, b: np.ndarra
     b_map = np.asarray(b, dtype=np.float64)[colors]
     var = a_map * np.maximum(np.asarray(noisy, dtype=np.float64), 0.0) + b_map
     return np.sqrt(np.maximum(var, 1e-12)).astype(np.float32)
+
+
+def synthesize_binned(
+    clean_rgb: np.ndarray,
+    a: np.ndarray,
+    b: np.ndarray,
+    n_sites: np.ndarray,
+    rng: np.random.Generator,
+    white: float = 1.0,
+    black_frac: float = 0.0,
+    quant_step: float | None = None,
+) -> np.ndarray:
+    """Noisy realization of superpixel-binned RGB planes.
+
+    clean_rgb (3, H, W) are per-channel means over n_sites[c] same-channel
+    sensels. The mean of n Poisson-Gaussian sites has
+    Var = (a*mean + b) / n exactly (the Poisson part is linear in the summed
+    signal), and the CLT makes it Gaussian for n >= 4 — so no per-site
+    sampling is needed. ADU quantization of the underlying sensels adds
+    step^2 / (12 n) to the variance of the mean.
+    """
+    clean = np.asarray(clean_rgb, dtype=np.float64)
+    n = np.asarray(n_sites, dtype=np.float64)[:, None, None]
+    var = (np.asarray(a)[:, None, None] * np.maximum(clean, 0.0)
+           + np.asarray(b)[:, None, None]) / n
+    if quant_step is not None:
+        var = var + (quant_step * quant_step) / (12.0 * n)
+    noisy = clean + rng.standard_normal(clean.shape) * np.sqrt(np.maximum(var, 0.0))
+    return np.clip(noisy, -abs(black_frac), white).astype(np.float32)
+
+
+def sigma_map_binned(noisy_rgb: np.ndarray, a: np.ndarray, b: np.ndarray,
+                     n_sites: np.ndarray) -> np.ndarray:
+    """Per-pixel sigma of binned RGB planes from noisy values — the coarse
+    stage's conditioning input, identical at training and inference:
+    sigma_c = sqrt((a_c * mean + b_c) / n_c)."""
+    n = np.asarray(n_sites, dtype=np.float64)[:, None, None]
+    var = (np.asarray(a, dtype=np.float64)[:, None, None]
+           * np.maximum(np.asarray(noisy_rgb, dtype=np.float64), 0.0)
+           + np.asarray(b, dtype=np.float64)[:, None, None]) / n
+    return np.sqrt(np.maximum(var, 1e-12)).astype(np.float32)

@@ -26,8 +26,22 @@ from .model import build_model
 
 def load_model(ckpt_path: Path, raw_weights: bool = False):
     ckpt = torch.load(ckpt_path, map_location="cpu")
-    cfg = ckpt["cfg"]
-    model = build_model(base=cfg["base"], depth=cfg["depth"])
+    cfg = dict(ckpt["cfg"])
+    if cfg.get("arch") == "unet-ms":
+        from .model import MSUNet
+
+        model = MSUNet(coarse_base=cfg["coarse"]["base"], coarse_depth=cfg["coarse"]["depth"],
+                       fine_base=cfg["fine"]["base"], fine_depth=cfg["fine"]["depth"])
+        # the sigma convention the run synthesized with ships INSIDE the
+        # artifact: the C side reads it so model and conditioning can never
+        # drift apart (channel_sigma_scale = TOTAL per-channel multiplier)
+        from .profiles import DEFAULT_SIGMA_CALIBRATION
+
+        cfg.setdefault("anchor", 32)
+        cfg.setdefault("sigma_calibration",
+                       {"channel_sigma_scale": list(DEFAULT_SIGMA_CALIBRATION)})
+    else:
+        model = build_model(base=cfg["base"], depth=cfg["depth"])
     # the EMA weights are the shipping artifact when the run maintained them
     weights = ckpt["model"] if raw_weights or "ema" not in ckpt else ckpt["ema"]
     model.load_state_dict(weights)
@@ -67,6 +81,9 @@ def main(argv: list[str] | None = None) -> int:
     print(f"{out} ({size / 1e6:.1f} MB, step {step}, {which} weights, cfg {cfg})")
 
     if args.onnx:
+        if cfg.get("arch") == "unet-ms":
+            print("ONNX export is single-net only; skipping for unet-ms")
+            return 0
         dummy = torch.zeros(1, cfg["in_channels"], 128, 128)
         torch.onnx.export(
             model, dummy, str(args.onnx), input_names=["input"], output_names=["output"],
@@ -78,3 +95,50 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+
+def read_anselnn(path):
+    """Parse an .anselnn file back into (cfg, {name: np.ndarray}).
+
+    Inverse of write_anselnn — used by benchmarks and round-trip tests so a
+    shipped artifact can be evaluated in torch exactly as the C executor
+    sees it.
+    """
+    import numpy as np
+
+    data = Path(path).read_bytes()
+    if data[:8] != b"ANSELDN1":
+        raise ValueError(f"{path}: not an .anselnn file")
+    hlen = struct.unpack("<I", data[8:12])[0]
+    header = json.loads(data[12:12 + hlen].decode())
+    payload = data[12 + hlen:]
+    tensors = {}
+    for t in header["tensors"]:
+        arr = np.frombuffer(payload, dtype=np.float32,
+                            count=t["size"] // 4, offset=t["offset"])
+        tensors[t["name"]] = arr.copy().reshape(t["shape"])
+    return header["cfg"], tensors
+
+
+def load_model_from_anselnn(path):
+    """Instantiate the torch model matching an .anselnn file and load its
+    weights bit-exactly ('unet' and 'unet-ms')."""
+    from .model import MSUNet, UNet
+
+    cfg, tensors = read_anselnn(path)
+    arch = cfg.get("arch")
+    if arch == "unet":
+        model = UNet(base=cfg["base"], depth=cfg["depth"],
+                     in_channels=cfg.get("in_channels", 5),
+                     out_channels=cfg.get("out_channels", 1))
+    elif arch == "unet-ms":
+        model = MSUNet(coarse_base=cfg["coarse"]["base"],
+                       coarse_depth=cfg["coarse"]["depth"],
+                       fine_base=cfg["fine"]["base"],
+                       fine_depth=cfg["fine"]["depth"])
+    else:
+        raise ValueError(f"unsupported arch {arch!r}")
+    state = {k: torch.from_numpy(v) for k, v in tensors.items()}
+    model.load_state_dict(state)
+    model.eval()
+    return model, cfg

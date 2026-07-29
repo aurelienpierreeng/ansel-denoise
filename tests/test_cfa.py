@@ -40,3 +40,52 @@ def test_aligned_offset():
         assert off % 6 == 0 and 0 <= off <= 70
     with pytest.raises(ValueError):
         aligned_offset(rng, 10, 20, 2)
+
+
+def test_bin_for_pattern():
+    from ansel_denoise.cfa import BAYER_RGGB, XTRANS, bin_for_pattern
+
+    assert bin_for_pattern(BAYER_RGGB) == 4
+    assert bin_for_pattern(XTRANS) == 6
+
+
+def test_bin_mosaic_counts_and_means():
+    """Superpixel counts are exact per CFA family and the count-weighted mean
+    reproduces a flat field bit-exactly — the cross-repo binning contract."""
+    import torch
+
+    from ansel_denoise.cfa import (BAYER_RGGB, XTRANS, bin_mosaic_torch,
+                                   colors_map, one_hot)
+
+    for pattern, bin_factor, expected in [
+        (BAYER_RGGB, 4, (4, 8, 4)),
+        (XTRANS, 6, (8, 20, 8)),
+    ]:
+        size = 2 * bin_factor
+        oh = torch.from_numpy(one_hot(colors_map(pattern, size, size)))[None]
+        mosaic = torch.full((1, 1, size, size), 0.25)
+        rgb, counts = bin_mosaic_torch(mosaic, oh, bin_factor)
+        assert tuple(int(v) for v in counts[0, :, 0, 0]) == expected
+        assert torch.allclose(rgb, torch.full_like(rgb, 0.25))
+
+
+def test_bin_sigma_matches_analytic():
+    """Coarse sigma derived from the fine sigma plane equals the analytic
+    sigma of the mean of n sensels."""
+    import numpy as np
+    import torch
+
+    from ansel_denoise.cfa import (BAYER_RGGB, bin_mosaic_torch, bin_sigma_torch,
+                                   colors_map, one_hot)
+    from ansel_denoise.noise import sigma_map, sigma_map_binned
+
+    a = np.array([2e-4, 1e-4, 3e-4])
+    b = np.array([1e-6, 2e-6, 1.5e-6])
+    colors = colors_map(BAYER_RGGB, 64, 64)
+    oh = torch.from_numpy(one_hot(colors))[None]
+    fine = sigma_map(np.full((64, 64), 0.3, np.float32), colors, a, b)
+    _, counts = bin_mosaic_torch(torch.zeros(1, 1, 64, 64), oh, 4)
+    from_fine = bin_sigma_torch(torch.from_numpy(fine)[None, None], oh, 4, counts)
+    direct = sigma_map_binned(np.full((3, 16, 16), 0.3, np.float32), a, b,
+                              np.array([4, 8, 4]))
+    assert float((from_fine[0] - torch.from_numpy(direct)).abs().max()) < 1e-6
