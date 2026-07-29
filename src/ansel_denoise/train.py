@@ -19,7 +19,7 @@ from pathlib import Path
 import torch
 from torch.utils.data import DataLoader
 
-from .cfa import anchor_low_band, bin_mosaic_torch, bin_sigma_torch
+from .cfa import anchor_low_band, bin_mosaic_torch, bin_sigma_torch, fuse_low_bands
 from .dataset import RawTileDataset
 from .metrics import lfce
 from .model import MSUNet, build_model, count_params
@@ -91,9 +91,8 @@ def ms_forward(model, x, bins, guide_net=None):
         c_in, _ = coarse_planes(noisy[idx], onehot[idx], sigma[idx], bf)
         guide = upsample_guide(coarse(c_in), bf)
         out = model.fine(torch.cat([x[idx], guide], dim=1))
-        anchor = model.cfg.get("anchor", 0)
-        if anchor:
-            out = anchor_low_band(out, noisy[idx], onehot[idx], anchor)
+        if model.cfg.get("anchor", 0):
+            out = fuse_low_bands(out, noisy[idx], onehot[idx], sigma[idx])
         pred[idx] = out
     return pred
 
@@ -184,9 +183,9 @@ def ms_step(model, guide_net, x, y, bins, opt_coarse, opt_fine,
         with torch.amp.autocast(device.type, enabled=device.type == "cuda"):
             out = model.fine(f_in)
             if anchor:
-                # anchored band has zero gradient: the fine net specializes
-                # on the passband above the anchor scale
-                out = anchor_low_band(out, noisy[idx], onehot[idx], anchor)
+                # fused bands carry (partly) zeroed gradient: the fine net
+                # specializes on the passband above the fusion scales
+                out = fuse_low_bands(out, noisy[idx], onehot[idx], sigma[idx])
             loss_fine = loss_fine + weight * fine_loss(out, y[idx], onehot[idx], bf)
     scaler_fine.scale(loss_fine).backward()
     scaler_fine.step(opt_fine)

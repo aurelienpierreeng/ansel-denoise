@@ -102,6 +102,35 @@ def bin_sigma_torch(sigma, onehot, bin_factor: int, counts):
     return s2.sqrt() / counts.clamp(min=1.0)
 
 
+def fuse_low_bands(pred, noisy, onehot, sigma, scales=(8, 16, 32, 64)):
+    """Hybrid low-band fusion: per-band self-calibrated Wiener weights at the
+    fine/mid scales, pure measurement at the coarsest (the anchor's dilution
+    floor). Measured to dominate both the hard anchor and full Wiener on
+    PSNR and LFCE at every scale. Bayer densities; the anchored/coarsest
+    band is exact measurement so the hallucination-free guarantee holds."""
+    import torch
+    import torch.nn.functional as F
+
+    s0, S = scales[0], scales[-1]
+    M = {s: bin_mosaic_torch(noisy, onehot, s)[0] for s in scales}
+    D = {s: bin_mosaic_torch(pred, onehot, s)[0] for s in scales}
+    dens = torch.tensor([0.25, 0.5, 0.25], device=pred.device).view(1, 3, 1, 1)
+    s2 = torch.stack([((sigma ** 2) * onehot[:, c:c + 1]).sum()
+                      / onehot[:, c:c + 1].sum().clamp(min=1.0)
+                      for c in range(3)]).view(1, 3, 1, 1)
+    up = lambda t: F.interpolate(t, scale_factor=2, mode="nearest")
+    fused = M[S]  # coarsest band: trust the n-averaged measurement outright
+    for s in reversed(scales[:-1]):
+        band_d = D[s] - up(D[2 * s])
+        band_m = M[s] - up(M[2 * s])
+        vn = s2 * (1.0 / (dens * s * s) - 1.0 / (dens * 4 * s * s))
+        vm = ((band_d - band_m) ** 2).mean(dim=(0, 2, 3), keepdim=True) - vn
+        w = vn / (vn + vm.clamp(min=0.0) + 1e-20)
+        fused = up(fused) + w * band_d + (1 - w) * band_m
+    corr = F.interpolate(fused - D[s0], scale_factor=s0, mode="nearest")
+    return pred + (corr * onehot).sum(dim=1, keepdim=True)
+
+
 def anchor_low_band(pred, noisy, onehot, scale: int):
     """Replace the prediction's per-channel low band with the NOISY input's.
 
