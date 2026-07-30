@@ -71,7 +71,10 @@ def fine_loss(pred, clean, onehot, bin_factor: int) -> torch.Tensor:
     penalize exactly the chroma-blotch failure mode."""
     loss = torch.nn.functional.l1_loss(pred, clean)
     residual = pred - clean
-    for factor, weight in ((bin_factor, 0.5), (4 * bin_factor, 0.25)):
+    # the third term (16*bin = the fusion-floor scale) directly penalizes
+    # DC drift of the local means — the deep-shadow failure mode
+    for factor, weight in ((bin_factor, 0.5), (4 * bin_factor, 0.25),
+                           (16 * bin_factor, 0.125)):
         rgb, _ = bin_mosaic_torch(residual, onehot, factor)
         loss = loss + weight * rgb.abs().mean()
     return loss
@@ -178,14 +181,19 @@ def ms_step(model, guide_net, x, y, bins, opt_coarse, opt_fine,
     # --- fine update
     opt_fine.zero_grad(set_to_none=True)
     loss_fine = torch.zeros((), device=device)
-    anchor = model.cfg.get("anchor", 0)
+    # The loss is computed on the UNFUSED output — the model must own its
+    # low bands. Fusing before the loss (as earlier revisions did) zeroes
+    # the low-band gradient, and the optimizer parks arbitrary DC drift
+    # there: the shipped model regressed deep shadows 3-4x toward a
+    # desaturated gray prior, which the inference anchor then had to mask
+    # unconditionally (reintroducing the box-mixing edge outline). With DC
+    # gradient restored, the cheapest way to minimize the binned loss terms
+    # where nothing is learnable is to reproduce the local measurement mean
+    # — the model learns to implement the anchor internally. Fusion remains
+    # at inference (ms_forward) as the safety net.
     for (bf, idx, _), (_, weight, f_in) in zip(groups, fine_inputs):
         with torch.amp.autocast(device.type, enabled=device.type == "cuda"):
             out = model.fine(f_in)
-            if anchor:
-                # fused bands carry (partly) zeroed gradient: the fine net
-                # specializes on the passband above the fusion scales
-                out = fuse_low_bands(out, noisy[idx], onehot[idx], sigma[idx])
             loss_fine = loss_fine + weight * fine_loss(out, y[idx], onehot[idx], bf)
     scaler_fine.scale(loss_fine).backward()
     scaler_fine.step(opt_fine)
