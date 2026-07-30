@@ -76,6 +76,22 @@ def test_val_is_deterministic_train_is_not(shard_dir):
     assert torch.equal(fb1, fb2)
 
 
+def test_wb_augmentation_varies_chroma(shard_dir):
+    # The fixture tile is gray (all channels share one signal), so the B/G
+    # ratio of the clean target is the drawn WB gain ratio. Across a few
+    # draws it must actually move — well beyond CFA sampling noise — or the
+    # augmentation is dead and the nets re-learn the corpus chroma prior.
+    train = RawTileDataset(shard_dir, "train", patch=96)
+    ratios = []
+    for _ in range(8):
+        x, y = train[0]
+        oh = x[1:4]
+        means = [float((y[0] * oh[c]).sum() / oh[c].sum()) for c in range(3)]
+        assert all(m > 0 for m in means)
+        ratios.append(means[2] / means[1])
+    assert max(abs(r - 1.0) for r in ratios) > 0.1
+
+
 def test_tile_cache_reuse_and_invalidation(shard_dir):
     from ansel_denoise.dataset import consolidate_tiles
 

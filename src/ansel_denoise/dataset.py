@@ -60,6 +60,17 @@ CACHE_VERSION = 2
 WHITE_JITTER = (0.92, 1.05)
 BLACK_JITTER_FRAC = 0.002
 
+# White-balance (channel-gain) augmentation: lower bound of the per-channel
+# log-uniform gain draw. The corpus is base-ISO captures whose raw-domain
+# chroma sits in a narrow daylight-ish band; without this the multi-scale
+# nets memorize that chroma prior and AMPLIFY out-of-distribution chroma
+# (~2x on tungsten night scenes — saturated yellow around edges, field bug
+# on DSC01047.ARW). Gains model the same sensor under a different
+# illuminant, so the synthesized noise stays physically exact on the gained
+# signal. 0.25 covers deep tungsten (B/G ~ 0.3) and the symmetric
+# green/magenta directions once normalized.
+WB_GAIN_MIN = 0.25
+
 
 def camera_split(camera: str, val_buckets: int = 10) -> str:
     """Deterministic 'train'/'val' split on the camera identity."""
@@ -281,6 +292,15 @@ class RawTileDataset(Dataset):
 
         # simulate underexposure that will be pushed later in the pipeline
         clean = clean * float(2.0 ** -rng.uniform(0.0, self.exposure_push_ev))
+
+        # WB augmentation (see WB_GAIN_MIN): per-channel gains normalized so
+        # the brightest channel stays at 1 — dimming-only, so a near-clipped
+        # clean target is never pushed past the white point. Applied BEFORE
+        # noise synthesis: the noise is computed on the gained signal, which
+        # keeps the (signal, noise) pair physically consistent.
+        wb = np.exp(rng.uniform(np.log(WB_GAIN_MIN), 0.0, size=3))
+        wb = (wb / wb.max()).astype(np.float32)
+        clean = clean * wb[colors]
 
         a, b, _ = self.sampler.sample(rng)
         if rng.random() < CLEAN_FRACTION:

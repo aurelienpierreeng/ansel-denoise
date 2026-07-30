@@ -80,11 +80,19 @@ def charts():
         ("flat-dark-0.02", (0.02, 0.02, 0.02)),
         ("luma-gradient", None),
         ("chroma-gradient", None),
+        ("tungsten-gradient", None),
     ]:
         if name == "luma-gradient":
             planes = [0.02 + 0.78 * x] * 3
         elif name == "chroma-gradient":
             planes = [0.1 + 0.5 * x, np.full_like(x, 0.3), 0.6 - 0.5 * x]
+        elif name == "tungsten-gradient":
+            # raw-domain tungsten night regime (the DSC01047.ARW field bug):
+            # strong out-of-corpus chroma at low signal. A chroma-faithful
+            # model tracks it; a corpus-chroma prior AMPLIFIES it (~2x seen
+            # on the pre-WB-augmentation multi-scale models).
+            g = 0.004 + 0.056 * x
+            planes = [0.75 * g, g, 0.35 * g]
         else:
             planes = [np.full_like(x, v) for v in rgb]
         mosaic = np.zeros((TILE, TILE), dtype=np.float32)
