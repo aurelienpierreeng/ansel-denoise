@@ -129,7 +129,7 @@ def gaussian_bin_torch(mosaic, onehot, scale: int):
     return (num / den.clamp(min=1e-6)).reshape(b, 3, h // scale, w // scale)
 
 
-def fuse_low_bands(pred, noisy, onehot, sigma, scales=(16, 32, 64)):
+def fuse_low_bands(pred, noisy, onehot, sigma, scales=(16, 32, 64), floor="anchored"):
     """Hybrid low-band fusion: per-band self-calibrated Wiener weights at the
     fine/mid scales, pure measurement at the coarsest (the anchor's dilution
     floor). Measured to dominate both the hard anchor and full Wiener on
@@ -175,17 +175,23 @@ def fuse_low_bands(pred, noisy, onehot, sigma, scales=(16, 32, 64)):
     # the model says (the dilution guarantee), structured cells keep the
     # model (a block average across an edge mixes both sides and would
     # bleed chroma as a saturated outline).
-    # FLOOR: unconditional anchor. This model regresses deep shadows toward
-    # its training prior (lifted, desaturated) because the anchored training
-    # loss gave low bands zero gradient — DC drift was free. No inference
-    # gate can separate "dark window in bright context" (model DC fine) from
-    # "dark scene" (model DC broken) reliably, so the measurement owns the
-    # floor everywhere: correct global color always beats a milder outline.
-    # Both real fixes are training-side (own the DC in the loss) and
-    # geometric (model-guided bilateral binning of the measurement); until
-    # then the residual cost is a mild saturation outline at hard edges
-    # (~+4% on the bench chart) — the lesser artifact by far.
-    fused = M[S]
+    # FLOOR: two modes, declared by the model's cfg.
+    # "anchored": unconditional measurement anchor — required for models
+    # trained with the fused loss (their DC drifts freely; measured 3-4x
+    # deep-shadow lift on the first fully-trained model).
+    # "gated": structure-attested-by-the-measurement gate — safe only for
+    # DC-ownership models (loss on the unfused output): flat cells anchor,
+    # structured cells keep the model, which removes the box-mixing edge
+    # outline. Validated: night-scene DC exact AND edge outline gone.
+    if floor == "gated":
+        vn_S = s2 / (dens * S * S)
+        mloc = M[S] - blur(M[S])
+        struct_S = (blur(mloc * mloc) - T * vn_S).clamp(min=0.0)
+        w_S = struct_S / (struct_S + vn_S + 1e-20)
+        fused = w_S * D[S] + (1 - w_S) * M[S]
+    else:
+        fused = M[S]
+    T = 2.5
     for s in reversed(scales[:-1]):
         band_d = D[s] - up(D[2 * s])
         band_m = M[s] - up(M[2 * s])

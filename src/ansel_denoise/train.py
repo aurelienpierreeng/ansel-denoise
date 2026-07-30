@@ -95,7 +95,8 @@ def ms_forward(model, x, bins, guide_net=None):
         guide = upsample_guide(coarse(c_in), bf)
         out = model.fine(torch.cat([x[idx], guide], dim=1))
         if model.cfg.get("anchor", 0):
-            out = fuse_low_bands(out, noisy[idx], onehot[idx], sigma[idx])
+            out = fuse_low_bands(out, noisy[idx], onehot[idx], sigma[idx],
+                                 floor=model.cfg.get("floor", "anchored"))
         pred[idx] = out
     return pred
 
