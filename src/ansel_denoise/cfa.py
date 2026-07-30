@@ -102,7 +102,7 @@ def bin_sigma_torch(sigma, onehot, bin_factor: int, counts):
     return s2.sqrt() / counts.clamp(min=1.0)
 
 
-def fuse_low_bands(pred, noisy, onehot, sigma, scales=(8, 16, 32, 64)):
+def fuse_low_bands(pred, noisy, onehot, sigma, scales=(16, 32, 64)):
     """Hybrid low-band fusion: per-band self-calibrated Wiener weights at the
     fine/mid scales, pure measurement at the coarsest (the anchor's dilution
     floor). Measured to dominate both the hard anchor and full Wiener on
@@ -118,7 +118,13 @@ def fuse_low_bands(pred, noisy, onehot, sigma, scales=(8, 16, 32, 64)):
     s2 = torch.stack([((sigma ** 2) * onehot[:, c:c + 1]).sum()
                       / onehot[:, c:c + 1].sum().clamp(min=1.0)
                       for c in range(3)]).view(1, 3, 1, 1)
-    up = lambda t: F.interpolate(t, scale_factor=2, mode="nearest")
+    # BILINEAR upsampling throughout: the fused bands carry measurement
+    # noise (sigma/n per block, non-negligible on very noisy images) and
+    # nearest upsampling turns it into visible checkers of colored squares;
+    # tent interpolation makes every injected correction piecewise-linear.
+    # The finest fusion band starts at 16 for the same reason: at 8 the
+    # per-block measurement noise is strongest and the model needs no help.
+    up = lambda t: F.interpolate(t, scale_factor=2, mode="bilinear", align_corners=False)
     fused = M[S]  # coarsest band: trust the n-averaged measurement outright
     for s in reversed(scales[:-1]):
         band_d = D[s] - up(D[2 * s])
@@ -127,7 +133,8 @@ def fuse_low_bands(pred, noisy, onehot, sigma, scales=(8, 16, 32, 64)):
         vm = ((band_d - band_m) ** 2).mean(dim=(0, 2, 3), keepdim=True) - vn
         w = vn / (vn + vm.clamp(min=0.0) + 1e-20)
         fused = up(fused) + w * band_d + (1 - w) * band_m
-    corr = F.interpolate(fused - D[s0], scale_factor=s0, mode="nearest")
+    corr = F.interpolate(fused - D[s0], scale_factor=s0, mode="bilinear",
+                         align_corners=False)
     return pred + (corr * onehot).sum(dim=1, keepdim=True)
 
 
