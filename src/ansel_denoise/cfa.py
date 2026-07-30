@@ -102,6 +102,33 @@ def bin_sigma_torch(sigma, onehot, bin_factor: int, counts):
     return s2.sqrt() / counts.clamp(min=1.0)
 
 
+def gaussian_bin_torch(mosaic, onehot, scale: int):
+    """Gaussian-windowed superpixel means (overlapping 2s x 2s windows,
+    sigma = s/2, stride s), per CFA channel with weight normalization.
+
+    Used by the low-band fusion INSTEAD of box binning: a box window samples
+    R, G and B at different effective positions relative to a luminance edge
+    (their sensel sites differ inside the block), so edge-straddling blocks
+    acquire a false chroma skew that the fusion's measurement bands inject
+    into the output as a saturated outline along high-contrast edges. A
+    Gaussian aperture is (nearly) identical for all three channels, which
+    collapses the skew; the overlap also removes residual grid signature.
+    The coarse-net input keeps box binning (bin_mosaic_torch): that is the
+    training contract for the guide."""
+    import torch
+    import torch.nn.functional as F
+
+    r = torch.arange(2 * scale, dtype=mosaic.dtype, device=mosaic.device) - (scale - 0.5)
+    g1 = torch.exp(-(r * r) / (2.0 * (scale / 2.0) ** 2))
+    k = (g1[:, None] * g1[None, :])[None, None]
+    b, _, h, w = mosaic.shape
+    weighted = (mosaic * onehot).reshape(b * 3, 1, h, w)
+    weights = onehot.reshape(b * 3, 1, h, w)
+    num = F.conv2d(weighted, k, stride=scale, padding=scale // 2)
+    den = F.conv2d(weights, k, stride=scale, padding=scale // 2)
+    return (num / den.clamp(min=1e-6)).reshape(b, 3, h // scale, w // scale)
+
+
 def fuse_low_bands(pred, noisy, onehot, sigma, scales=(16, 32, 64)):
     """Hybrid low-band fusion: per-band self-calibrated Wiener weights at the
     fine/mid scales, pure measurement at the coarsest (the anchor's dilution
@@ -125,13 +152,40 @@ def fuse_low_bands(pred, noisy, onehot, sigma, scales=(16, 32, 64)):
     # The finest fusion band starts at 16 for the same reason: at 8 the
     # per-block measurement noise is strongest and the model needs no help.
     up = lambda t: F.interpolate(t, scale_factor=2, mode="bilinear", align_corners=False)
-    fused = M[S]  # coarsest band: trust the n-averaged measurement outright
+    blur = lambda t: F.avg_pool2d(F.pad(t, (1, 1, 1, 1), mode="replicate"), 3, stride=1)
+
+    # Weights are LOCAL (per cell, 3x3-smoothed): a global per-tile weight
+    # injects the measurement's band-pass response of hard edges — a
+    # difference-of-smoothings halo that shows as a saturated outline along
+    # high-contrast borders. Locally, structure makes the band discrepancy
+    # huge, which must drive the blend toward the model exactly there.
+    # Floor band: structure-gated anchor — pure measurement where the local
+    # discrepancy is noise-sized (the dilution guarantee on smooth content),
+    # the model where structure dominates (edges).
+    # T is a chi^2-quantile guard: the local mean of d^2 over a 3x3 cell
+    # neighbourhood has ~9 effective samples, so pure-noise cells fluctuate
+    # up to ~2x their expectation; subtracting T*vn (not vn) keeps them
+    # clamped at zero (anchor intact) while structure exceeds it by orders
+    # of magnitude and is unaffected.
+    T = 2.5
+    # Floor gate: the discrepancy D-M cannot discriminate a real edge from
+    # the model drifting on flat content (both are large) — the MEASUREMENT
+    # must attest the structure. Local variance of the binned measurement,
+    # noise-corrected: flat cells anchor to the measurement no matter what
+    # the model says (the dilution guarantee), structured cells keep the
+    # model (a block average across an edge mixes both sides and would
+    # bleed chroma as a saturated outline).
+    vn_S = s2 / (dens * S * S)
+    mloc = M[S] - blur(M[S])
+    struct_S = (blur(mloc * mloc) - T * vn_S).clamp(min=0.0)
+    w_S = struct_S / (struct_S + vn_S + 1e-20)  # ->0 flat (anchor), ->1 edges
+    fused = w_S * D[S] + (1 - w_S) * M[S]
     for s in reversed(scales[:-1]):
         band_d = D[s] - up(D[2 * s])
         band_m = M[s] - up(M[2 * s])
         vn = s2 * (1.0 / (dens * s * s) - 1.0 / (dens * 4 * s * s))
-        vm = ((band_d - band_m) ** 2).mean(dim=(0, 2, 3), keepdim=True) - vn
-        w = vn / (vn + vm.clamp(min=0.0) + 1e-20)
+        vm = (blur((band_d - band_m) ** 2) - T * vn).clamp(min=0.0)
+        w = vn / (vn + vm + 1e-20)  # ->1 flat (model band), ->1 nowhere harmful
         fused = up(fused) + w * band_d + (1 - w) * band_m
     corr = F.interpolate(fused - D[s0], scale_factor=s0, mode="bilinear",
                          align_corners=False)
