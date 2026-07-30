@@ -115,13 +115,6 @@ class MSUNet(nn.Module):
             "bin": {"bayer": 4, "xtrans": 6},
             "guide": "coarse-rgb-nearest",
             "anchor": 32,
-            # floor mode of the low-band fusion: "gated" is only safe for
-            # models trained with the DC-ownership loss (unfused output) —
-            # they own their local means, so the structure gate can hand
-            # edges to the model and kill the box-mixing outline. Models
-            # trained with the fused loss MUST keep "anchored" (their DC
-            # drifts and the gate would let it through).
-            "floor": "gated",
         }
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:

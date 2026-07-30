@@ -129,7 +129,7 @@ def gaussian_bin_torch(mosaic, onehot, scale: int):
     return (num / den.clamp(min=1e-6)).reshape(b, 3, h // scale, w // scale)
 
 
-def fuse_low_bands(pred, noisy, onehot, sigma, scales=(16, 32, 64), floor="anchored"):
+def fuse_low_bands(pred, noisy, onehot, sigma, scales=(16, 32, 64)):
     """Hybrid low-band fusion: per-band self-calibrated Wiener weights at the
     fine/mid scales, pure measurement at the coarsest (the anchor's dilution
     floor). Measured to dominate both the hard anchor and full Wiener on
@@ -159,39 +159,26 @@ def fuse_low_bands(pred, noisy, onehot, sigma, scales=(16, 32, 64), floor="ancho
     # difference-of-smoothings halo that shows as a saturated outline along
     # high-contrast borders. Locally, structure makes the band discrepancy
     # huge, which must drive the blend toward the model exactly there.
-    # Floor band: structure-gated anchor — pure measurement where the local
-    # discrepancy is noise-sized (the dilution guarantee on smooth content),
-    # the model where structure dominates (edges).
-    # T is a chi^2-quantile guard: the local mean of d^2 over a 3x3 cell
-    # neighbourhood has ~9 effective samples, so pure-noise cells fluctuate
-    # up to ~2x their expectation; subtracting T*vn (not vn) keeps them
-    # clamped at zero (anchor intact) while structure exceeds it by orders
-    # of magnitude and is unaffected.
+    # T is a chi^2-quantile guard: the local mean of a squared noise term
+    # over a 3x3 cell neighbourhood has ~9 effective samples, so pure-noise
+    # cells fluctuate up to ~2x their expectation; subtracting T*vn (not vn)
+    # keeps them clamped at zero while structure exceeds it by orders of
+    # magnitude and is unaffected.
     T = 2.5
-    # Floor gate: the discrepancy D-M cannot discriminate a real edge from
-    # the model drifting on flat content (both are large) — the MEASUREMENT
-    # must attest the structure. Local variance of the binned measurement,
-    # noise-corrected: flat cells anchor to the measurement no matter what
-    # the model says (the dilution guarantee), structured cells keep the
-    # model (a block average across an edge mixes both sides and would
-    # bleed chroma as a saturated outline).
-    # FLOOR: two modes, declared by the model's cfg.
-    # "anchored": unconditional measurement anchor — required for models
-    # trained with the fused loss (their DC drifts freely; measured 3-4x
-    # deep-shadow lift on the first fully-trained model).
-    # "gated": structure-attested-by-the-measurement gate — safe only for
-    # DC-ownership models (loss on the unfused output): flat cells anchor,
-    # structured cells keep the model, which removes the box-mixing edge
-    # outline. Validated: night-scene DC exact AND edge outline gone.
-    if floor == "gated":
-        vn_S = s2 / (dens * S * S)
-        mloc = M[S] - blur(M[S])
-        struct_S = (blur(mloc * mloc) - T * vn_S).clamp(min=0.0)
-        w_S = struct_S / (struct_S + vn_S + 1e-20)
-        fused = w_S * D[S] + (1 - w_S) * M[S]
-    else:
-        fused = M[S]
-    T = 2.5
+    # FLOOR: structure-gated blend — the measurement owns every cell where
+    # its own mean-removed local energy is noise-sized (the dilution
+    # guarantee), the model owns structured cells (a box average across an
+    # edge mixes both sides -> saturated outline). The gate reads the
+    # MEASUREMENT, not the model discrepancy: D-M cannot discriminate a real
+    # edge from the model drifting on flat content (both are large). This
+    # REQUIRES a model trained with the DC-ownership loss (loss on the
+    # unfused output): models from the older fused loss drift in deep
+    # shadows and must not be used with this code.
+    vn_S = s2 / (dens * S * S)
+    mloc = M[S] - blur(M[S])
+    struct_S = (blur(mloc * mloc) - T * vn_S).clamp(min=0.0)
+    w_S = struct_S / (struct_S + vn_S + 1e-20)
+    fused = w_S * D[S] + (1 - w_S) * M[S]
     for s in reversed(scales[:-1]):
         band_d = D[s] - up(D[2 * s])
         band_m = M[s] - up(M[2 * s])
