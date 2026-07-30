@@ -175,11 +175,17 @@ def fuse_low_bands(pred, noisy, onehot, sigma, scales=(16, 32, 64)):
     # the model says (the dilution guarantee), structured cells keep the
     # model (a block average across an edge mixes both sides and would
     # bleed chroma as a saturated outline).
-    vn_S = s2 / (dens * S * S)
-    mloc = M[S] - blur(M[S])
-    struct_S = (blur(mloc * mloc) - T * vn_S).clamp(min=0.0)
-    w_S = struct_S / (struct_S + vn_S + 1e-20)  # ->0 flat (anchor), ->1 edges
-    fused = w_S * D[S] + (1 - w_S) * M[S]
+    # FLOOR: unconditional anchor. This model regresses deep shadows toward
+    # its training prior (lifted, desaturated) because the anchored training
+    # loss gave low bands zero gradient — DC drift was free. No inference
+    # gate can separate "dark window in bright context" (model DC fine) from
+    # "dark scene" (model DC broken) reliably, so the measurement owns the
+    # floor everywhere: correct global color always beats a milder outline.
+    # Both real fixes are training-side (own the DC in the loss) and
+    # geometric (model-guided bilateral binning of the measurement); until
+    # then the residual cost is a mild saturation outline at hard edges
+    # (~+4% on the bench chart) — the lesser artifact by far.
+    fused = M[S]
     for s in reversed(scales[:-1]):
         band_d = D[s] - up(D[2 * s])
         band_m = M[s] - up(M[2 * s])
