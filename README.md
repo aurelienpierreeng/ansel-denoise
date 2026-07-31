@@ -272,12 +272,11 @@ secrets with the committed version output as automatic fallback, plus a
 wall-clock budget so the save always beats the session kill. Between the
 two free tiers, a full 100k-step training fits in one week of quota.
 
-[notebooks/train_distilled.ipynb](notebooks/train_distilled.ipynb) is its
-twin for the **distilled** base-16 model (1.9M params — the CPU-path variant
-Ansel loads when OpenCL is unavailable). It is identical except `BASE = 16`
-and a distinct `RUN_NAME`, so the two can train side by side (e.g. one on
-Colab, one on Kaggle) without their checkpoints colliding; export the result
-as `--variant distilled`.
+Google Colab T4 instances (GPU) can be used for free and allow around 5h40
+of computing every couple of days (they are fully opaque on the amount).
+The multi-scale large model will train in 12h30 and the single-scale in 6h30
+on these instances. On A1000 instances (requiring a paid subscription to
+Google Colab Pro), both will train under 3 hours.
 
 Runs as-is on CPU (smoke test) or a single CUDA GPU (real training, 1–3 days
 on one consumer GPU); see [docs/cloud.md](docs/cloud.md) for the remote
