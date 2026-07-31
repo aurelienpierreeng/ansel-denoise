@@ -83,3 +83,49 @@ def test_resume_from_pre_ema_checkpoint(shard_dir, tmp_path):
     assert "ema" in ckpt2
     _, _, _, which = load_model(out / "ckpt-final.pt")
     assert which == "ema"
+
+
+def test_fine_loss_prices_chroma_above_luma():
+    # Two residuals of identical per-site magnitude: common-mode (luma) and
+    # channel-opposed (chroma: R up, G down). Plain L1 and per-channel binned
+    # L1 cost them the same — only the U/V terms separate them. The chroma
+    # residual must cost strictly more, or the loss is chroma-blind at
+    # structure again (the yellow-edge field regression).
+    from ansel_denoise.cfa import BAYER_RGGB, colors_map, one_hot
+    from ansel_denoise.train import fine_loss
+
+    n, e = 64, 0.01
+    colors = colors_map(BAYER_RGGB, n, n)
+    oh = torch.from_numpy(one_hot(colors)[None])
+    clean = torch.full((1, 1, n, n), 0.3)
+    luma = clean + e
+    sign = torch.from_numpy(np.where(colors == 1, -1.0, 1.0).astype(np.float32))
+    chroma = clean + e * sign
+    l_luma = fine_loss(luma, clean, oh, 4)
+    l_chroma = fine_loss(chroma, clean, oh, 4)
+    assert l_chroma > l_luma * 1.2
+
+
+def test_code_revision_signs_checkpoint_and_artifact(shard_dir, tmp_path):
+    # Every checkpoint and exported .anselnn carries the git hash of the
+    # training code (the provenance signature that kills any doubt about
+    # which revision produced a model).
+    import json
+    import struct
+
+    from ansel_denoise.export import main as export_main
+    from ansel_denoise.train import code_revision
+
+    rev = code_revision()
+    assert rev and rev != "unknown"
+    out = tmp_path / "run"
+    _run(shard_dir, out, 4)
+    ckpt = torch.load(out / "ckpt-final.pt", map_location="cpu")
+    assert ckpt["code_revision"] == rev
+    dest = tmp_path / "m.anselnn"
+    assert export_main([str(out / "ckpt-final.pt"), "--out", str(dest)]) == 0
+    with open(dest, "rb") as f:
+        assert f.read(8) == b"ANSELDN1"
+        (hlen,) = struct.unpack("<I", f.read(4))
+        cfg = json.loads(f.read(hlen))["cfg"]
+    assert cfg["code_revision"] == rev

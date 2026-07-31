@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -77,6 +78,20 @@ def fine_loss(pred, clean, onehot, bin_factor: int) -> torch.Tensor:
                            (16 * bin_factor, 0.125)):
         rgb, _ = bin_mosaic_torch(residual, onehot, factor)
         loss = loss + weight * rgb.abs().mean()
+        # Chroma terms (U = R-G, V = B-G of the binned residual; binning is
+        # linear, so this is the residual of the binned chroma). Per-channel
+        # L1 is chroma-blind: around structure it is dominated by the
+        # irreducible luma edge residual, so trading chroma fidelity for
+        # luma sharpness is cheap — the field failure mode (chroma deviation
+        # along bright edges). The binning cancels most of the common-mode
+        # luma residual while a chroma deviation survives the subtraction
+        # and gets billed directly. Downstream demosaicing assumes locally
+        # smooth chrominance — its founding prior — so output chroma
+        # fidelity is what the next pipeline stage requires of its input.
+        # Weight 0.5 relative to the scale's RGB term, mirroring coarse_loss.
+        du = rgb[:, 0] - rgb[:, 1]
+        dv = rgb[:, 2] - rgb[:, 1]
+        loss = loss + 0.5 * weight * 0.5 * (du.abs().mean() + dv.abs().mean())
     return loss
 
 
@@ -128,12 +143,33 @@ def validate(model, loader, device, max_batches: int = 50) -> tuple[float, float
     return sum(scores) / n, sum(baselines) / n
 
 
+_CODE_REVISION: str | None = None
+
+
+def code_revision() -> str:
+    """Short git hash of the training code, stamped into every checkpoint and
+    carried into the exported .anselnn cfg — each model is signed with the
+    exact code revision that produced it, so there is never any doubt which
+    loss/sampler/augmentation trained a given artifact."""
+    global _CODE_REVISION
+    if _CODE_REVISION is None:
+        try:
+            _CODE_REVISION = subprocess.run(
+                ["git", "-C", str(Path(__file__).resolve().parents[2]),
+                 "rev-parse", "--short", "HEAD"],
+                capture_output=True, text=True, check=True).stdout.strip() or "unknown"
+        except Exception:
+            _CODE_REVISION = "unknown"
+    return _CODE_REVISION
+
+
 def save_checkpoint(path: Path, model, opt, step: int, best_psnr: float = float("-inf"),
                     stale_vals: int = 0, ema: dict | None = None,
                     opt_coarse=None) -> None:
     torch.save(
         {"cfg": model.cfg, "model": model.state_dict(), "opt": opt.state_dict(), "step": step,
          "best_psnr": best_psnr, "stale_vals": stale_vals,
+         "code_revision": code_revision(),
          **({"ema": ema} if ema is not None else {}),
          **({"opt_coarse": opt_coarse.state_dict()} if opt_coarse is not None else {})},
         path,
@@ -373,6 +409,14 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.resume:
         ckpt = torch.load(args.resume, map_location=device)
+        ckpt_rev = ckpt.get("code_revision")
+        if ckpt_rev and ckpt_rev != code_revision():
+            # the notebook keys checkpoint folders by code hash, so this only
+            # trips on manual/local resumes — but a run mixing code revisions
+            # is exactly the provenance doubt the stamping exists to kill
+            print(f"WARNING: resuming a checkpoint trained at revision {ckpt_rev} "
+                  f"with code at {code_revision()} — the exported model will be "
+                  f"stamped with the CURRENT revision", flush=True)
         model.load_state_dict(ckpt["model"])
         opt.load_state_dict(ckpt["opt"])
         step = ckpt["step"]

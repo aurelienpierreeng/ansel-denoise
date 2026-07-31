@@ -27,6 +27,10 @@ from .model import build_model
 def load_model(ckpt_path: Path, raw_weights: bool = False):
     ckpt = torch.load(ckpt_path, map_location="cpu")
     cfg = dict(ckpt["cfg"])
+    # provenance signature: the training-code git hash stamped in the
+    # checkpoint travels into the artifact cfg (the C loader ignores it)
+    if ckpt.get("code_revision"):
+        cfg["code_revision"] = ckpt["code_revision"]
     if cfg.get("arch") == "unet-ms":
         from .model import MSUNet
 
