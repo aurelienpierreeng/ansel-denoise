@@ -10,163 +10,907 @@
    "picture": "0001.NEF",
    "camera": "Nikon D700",
    "iso": 3200.0,
-   "psnr_noisy": 39.18,
-   "denoiseprofile": 42.45,
-   "gain denoiseprofile": 3.27,
-   "denoiseprofile 200%": 44.17,
-   "gain denoiseprofile 200%": 4.99,
+   "psnr_noisy": 39.17,
    "ai large-multi": 47.06,
-   "gain ai large-multi": 7.88,
-   "ai large-single": 46.95,
-   "gain ai large-single": 7.77,
+   "gain ai large-multi": 7.89,
+   "ai large-single": 46.96,
+   "gain ai large-single": 7.79,
    "ai half-multi": 46.83,
-   "gain ai half-multi": 7.65,
-   "ai half-single": 46.93,
-   "gain ai half-single": 7.75
+   "gain ai half-multi": 7.66,
+   "ai half-single": 46.96,
+   "gain ai half-single": 7.79,
+   "denoiseprofile sweep": [
+    {
+     "mode": 1,
+     "color_mode": 1,
+     "strength": 0.5,
+     "psnr": 41.5
+    },
+    {
+     "mode": 1,
+     "color_mode": 1,
+     "strength": 0.75,
+     "psnr": 42.04
+    },
+    {
+     "mode": 1,
+     "color_mode": 1,
+     "strength": 1.0,
+     "psnr": 42.46
+    },
+    {
+     "mode": 1,
+     "color_mode": 1,
+     "strength": 1.5,
+     "psnr": 43.33
+    },
+    {
+     "mode": 1,
+     "color_mode": 1,
+     "strength": 2.0,
+     "psnr": 44.17
+    },
+    {
+     "mode": 1,
+     "color_mode": 1,
+     "strength": 3.0,
+     "psnr": 45.02
+    },
+    {
+     "mode": 1,
+     "color_mode": 1,
+     "strength": 4.0,
+     "psnr": 44.88
+    },
+    {
+     "mode": 1,
+     "color_mode": 0,
+     "strength": 0.5,
+     "psnr": 44.91
+    },
+    {
+     "mode": 1,
+     "color_mode": 0,
+     "strength": 0.75,
+     "psnr": 45.31
+    },
+    {
+     "mode": 1,
+     "color_mode": 0,
+     "strength": 1.0,
+     "psnr": 45.36
+    },
+    {
+     "mode": 1,
+     "color_mode": 0,
+     "strength": 1.5,
+     "psnr": 45.21
+    },
+    {
+     "mode": 1,
+     "color_mode": 0,
+     "strength": 2.0,
+     "psnr": 45.03
+    },
+    {
+     "mode": 1,
+     "color_mode": 0,
+     "strength": 3.0,
+     "psnr": 44.74
+    },
+    {
+     "mode": 1,
+     "color_mode": 0,
+     "strength": 4.0,
+     "psnr": 44.52
+    },
+    {
+     "mode": 0,
+     "color_mode": 1,
+     "strength": 0.5,
+     "psnr": 45.69
+    },
+    {
+     "mode": 0,
+     "color_mode": 1,
+     "strength": 0.75,
+     "psnr": 46.26
+    },
+    {
+     "mode": 0,
+     "color_mode": 1,
+     "strength": 1.0,
+     "psnr": 46.41
+    },
+    {
+     "mode": 0,
+     "color_mode": 1,
+     "strength": 1.5,
+     "psnr": 46.31
+    },
+    {
+     "mode": 0,
+     "color_mode": 1,
+     "strength": 2.0,
+     "psnr": 46.13
+    },
+    {
+     "mode": 0,
+     "color_mode": 1,
+     "strength": 3.0,
+     "psnr": 45.88
+    },
+    {
+     "mode": 0,
+     "color_mode": 1,
+     "strength": 4.0,
+     "psnr": 45.73
+    }
+   ],
+   "denoiseprofile best params": {
+    "mode": 0,
+    "color_mode": 1,
+    "strength": 1.0,
+    "psnr": 46.41
+   },
+   "denoiseprofile": 46.41,
+   "gain denoiseprofile": 7.24,
+   "gain denoiseprofile defaults": 3.29
   },
   {
    "picture": "0001.NEF",
    "camera": "Nikon D700",
    "iso": 12800.0,
-   "psnr_noisy": 32.98,
-   "denoiseprofile": 36.67,
-   "gain denoiseprofile": 3.69,
-   "denoiseprofile 200%": 38.88,
-   "gain denoiseprofile 200%": 5.9,
-   "ai large-multi": 45.43,
-   "gain ai large-multi": 12.45,
-   "ai large-single": 45.23,
-   "gain ai large-single": 12.25,
-   "ai half-multi": 45.07,
-   "gain ai half-multi": 12.09,
-   "ai half-single": 45.03,
-   "gain ai half-single": 12.05
-  },
-  {
-   "picture": "0001.NEF",
-   "camera": "Nikon D700",
-   "iso": 51200.0,
-   "psnr_noisy": 32.97,
-   "denoiseprofile": 36.67,
-   "gain denoiseprofile": 3.7,
-   "denoiseprofile 200%": 38.88,
-   "gain denoiseprofile 200%": 5.91,
-   "ai large-multi": 45.41,
-   "gain ai large-multi": 12.44,
-   "ai large-single": 45.21,
-   "gain ai large-single": 12.24,
+   "psnr_noisy": 32.99,
+   "ai large-multi": 45.4,
+   "gain ai large-multi": 12.41,
+   "ai large-single": 45.2,
+   "gain ai large-single": 12.21,
    "ai half-multi": 45.06,
-   "gain ai half-multi": 12.09,
-   "ai half-single": 45.03,
-   "gain ai half-single": 12.06
+   "gain ai half-multi": 12.07,
+   "ai half-single": 45.04,
+   "gain ai half-single": 12.05,
+   "denoiseprofile sweep": [
+    {
+     "mode": 1,
+     "color_mode": 1,
+     "strength": 0.5,
+     "psnr": 35.49
+    },
+    {
+     "mode": 1,
+     "color_mode": 1,
+     "strength": 0.75,
+     "psnr": 36.16
+    },
+    {
+     "mode": 1,
+     "color_mode": 1,
+     "strength": 1.0,
+     "psnr": 36.68
+    },
+    {
+     "mode": 1,
+     "color_mode": 1,
+     "strength": 1.5,
+     "psnr": 37.69
+    },
+    {
+     "mode": 1,
+     "color_mode": 1,
+     "strength": 2.0,
+     "psnr": 38.9
+    },
+    {
+     "mode": 1,
+     "color_mode": 1,
+     "strength": 3.0,
+     "psnr": 41.49
+    },
+    {
+     "mode": 1,
+     "color_mode": 1,
+     "strength": 4.0,
+     "psnr": 42.82
+    },
+    {
+     "mode": 1,
+     "color_mode": 0,
+     "strength": 0.5,
+     "psnr": 39.22
+    },
+    {
+     "mode": 1,
+     "color_mode": 0,
+     "strength": 0.75,
+     "psnr": 41.07
+    },
+    {
+     "mode": 1,
+     "color_mode": 0,
+     "strength": 1.0,
+     "psnr": 42.28
+    },
+    {
+     "mode": 1,
+     "color_mode": 0,
+     "strength": 1.5,
+     "psnr": 43.25
+    },
+    {
+     "mode": 1,
+     "color_mode": 0,
+     "strength": 2.0,
+     "psnr": 43.36
+    },
+    {
+     "mode": 1,
+     "color_mode": 0,
+     "strength": 3.0,
+     "psnr": 43.07
+    },
+    {
+     "mode": 1,
+     "color_mode": 0,
+     "strength": 4.0,
+     "psnr": 42.69
+    },
+    {
+     "mode": 0,
+     "color_mode": 1,
+     "strength": 0.5,
+     "psnr": 40.81
+    },
+    {
+     "mode": 0,
+     "color_mode": 1,
+     "strength": 0.75,
+     "psnr": 42.69
+    },
+    {
+     "mode": 0,
+     "color_mode": 1,
+     "strength": 1.0,
+     "psnr": 43.68
+    },
+    {
+     "mode": 0,
+     "color_mode": 1,
+     "strength": 1.5,
+     "psnr": 44.47
+    },
+    {
+     "mode": 0,
+     "color_mode": 1,
+     "strength": 2.0,
+     "psnr": 44.46
+    },
+    {
+     "mode": 0,
+     "color_mode": 1,
+     "strength": 3.0,
+     "psnr": 44.11
+    },
+    {
+     "mode": 0,
+     "color_mode": 1,
+     "strength": 4.0,
+     "psnr": 43.8
+    }
+   ],
+   "denoiseprofile best params": {
+    "mode": 0,
+    "color_mode": 1,
+    "strength": 1.5,
+    "psnr": 44.47
+   },
+   "denoiseprofile": 44.47,
+   "gain denoiseprofile": 11.48,
+   "gain denoiseprofile defaults": 3.69
   },
   {
    "picture": "0019.CR2",
    "camera": "Canon EOS 600D",
    "iso": 3200.0,
-   "psnr_noisy": 31.51,
-   "denoiseprofile": 34.69,
-   "gain denoiseprofile": 3.18,
-   "denoiseprofile 200%": 35.96,
-   "gain denoiseprofile 200%": 4.45,
+   "psnr_noisy": 31.5,
    "ai large-multi": 38.79,
-   "gain ai large-multi": 7.28,
-   "ai large-single": 38.56,
-   "gain ai large-single": 7.05,
-   "ai half-multi": 38.2,
-   "gain ai half-multi": 6.69,
-   "ai half-single": 38.45,
-   "gain ai half-single": 6.94
+   "gain ai large-multi": 7.29,
+   "ai large-single": 38.53,
+   "gain ai large-single": 7.03,
+   "ai half-multi": 38.23,
+   "gain ai half-multi": 6.73,
+   "ai half-single": 38.46,
+   "gain ai half-single": 6.96,
+   "denoiseprofile sweep": [
+    {
+     "mode": 1,
+     "color_mode": 1,
+     "strength": 0.5,
+     "psnr": 33.7
+    },
+    {
+     "mode": 1,
+     "color_mode": 1,
+     "strength": 0.75,
+     "psnr": 34.27
+    },
+    {
+     "mode": 1,
+     "color_mode": 1,
+     "strength": 1.0,
+     "psnr": 34.68
+    },
+    {
+     "mode": 1,
+     "color_mode": 1,
+     "strength": 1.5,
+     "psnr": 35.32
+    },
+    {
+     "mode": 1,
+     "color_mode": 1,
+     "strength": 2.0,
+     "psnr": 35.95
+    },
+    {
+     "mode": 1,
+     "color_mode": 1,
+     "strength": 3.0,
+     "psnr": 36.3
+    },
+    {
+     "mode": 1,
+     "color_mode": 1,
+     "strength": 4.0,
+     "psnr": 35.55
+    },
+    {
+     "mode": 1,
+     "color_mode": 0,
+     "strength": 0.5,
+     "psnr": 35.84
+    },
+    {
+     "mode": 1,
+     "color_mode": 0,
+     "strength": 0.75,
+     "psnr": 36.37
+    },
+    {
+     "mode": 1,
+     "color_mode": 0,
+     "strength": 1.0,
+     "psnr": 36.33
+    },
+    {
+     "mode": 1,
+     "color_mode": 0,
+     "strength": 1.5,
+     "psnr": 35.83
+    },
+    {
+     "mode": 1,
+     "color_mode": 0,
+     "strength": 2.0,
+     "psnr": 35.51
+    },
+    {
+     "mode": 1,
+     "color_mode": 0,
+     "strength": 3.0,
+     "psnr": 35.24
+    },
+    {
+     "mode": 1,
+     "color_mode": 0,
+     "strength": 4.0,
+     "psnr": 35.08
+    },
+    {
+     "mode": 0,
+     "color_mode": 1,
+     "strength": 0.5,
+     "psnr": 36.62
+    },
+    {
+     "mode": 0,
+     "color_mode": 1,
+     "strength": 0.75,
+     "psnr": 37.95
+    },
+    {
+     "mode": 0,
+     "color_mode": 1,
+     "strength": 1.0,
+     "psnr": 38.17
+    },
+    {
+     "mode": 0,
+     "color_mode": 1,
+     "strength": 1.5,
+     "psnr": 37.84
+    },
+    {
+     "mode": 0,
+     "color_mode": 1,
+     "strength": 2.0,
+     "psnr": 37.28
+    },
+    {
+     "mode": 0,
+     "color_mode": 1,
+     "strength": 3.0,
+     "psnr": 36.38
+    },
+    {
+     "mode": 0,
+     "color_mode": 1,
+     "strength": 4.0,
+     "psnr": 35.87
+    }
+   ],
+   "denoiseprofile best params": {
+    "mode": 0,
+    "color_mode": 1,
+    "strength": 1.0,
+    "psnr": 38.17
+   },
+   "denoiseprofile": 38.17,
+   "gain denoiseprofile": 6.67,
+   "gain denoiseprofile defaults": 3.18
   },
   {
    "picture": "0019.CR2",
    "camera": "Canon EOS 600D",
    "iso": 12800.0,
-   "psnr_noisy": 25.76,
-   "denoiseprofile": 29.11,
-   "gain denoiseprofile": 3.35,
-   "denoiseprofile 200%": 30.87,
-   "gain denoiseprofile 200%": 5.11,
+   "psnr_noisy": 25.78,
    "ai large-multi": 36.49,
-   "gain ai large-multi": 10.73,
-   "ai large-single": 35.94,
-   "gain ai large-single": 10.18,
-   "ai half-multi": 36.13,
-   "gain ai half-multi": 10.37,
-   "ai half-single": 35.95,
-   "gain ai half-single": 10.19
-  },
-  {
-   "picture": "0019.CR2",
-   "camera": "Canon EOS 600D",
-   "iso": 51200.0,
-   "psnr_noisy": 25.76,
-   "denoiseprofile": 29.11,
-   "gain denoiseprofile": 3.35,
-   "denoiseprofile 200%": 30.88,
-   "gain denoiseprofile 200%": 5.12,
-   "ai large-multi": 36.48,
-   "gain ai large-multi": 10.72,
-   "ai large-single": 35.93,
-   "gain ai large-single": 10.17,
+   "gain ai large-multi": 10.71,
+   "ai large-single": 35.98,
+   "gain ai large-single": 10.2,
    "ai half-multi": 36.1,
-   "gain ai half-multi": 10.34,
-   "ai half-single": 35.97,
-   "gain ai half-single": 10.21
+   "gain ai half-multi": 10.32,
+   "ai half-single": 35.98,
+   "gain ai half-single": 10.2,
+   "denoiseprofile sweep": [
+    {
+     "mode": 1,
+     "color_mode": 1,
+     "strength": 0.5,
+     "psnr": 27.98
+    },
+    {
+     "mode": 1,
+     "color_mode": 1,
+     "strength": 0.75,
+     "psnr": 28.62
+    },
+    {
+     "mode": 1,
+     "color_mode": 1,
+     "strength": 1.0,
+     "psnr": 29.12
+    },
+    {
+     "mode": 1,
+     "color_mode": 1,
+     "strength": 1.5,
+     "psnr": 29.9
+    },
+    {
+     "mode": 1,
+     "color_mode": 1,
+     "strength": 2.0,
+     "psnr": 30.88
+    },
+    {
+     "mode": 1,
+     "color_mode": 1,
+     "strength": 3.0,
+     "psnr": 32.94
+    },
+    {
+     "mode": 1,
+     "color_mode": 1,
+     "strength": 4.0,
+     "psnr": 33.9
+    },
+    {
+     "mode": 1,
+     "color_mode": 0,
+     "strength": 0.5,
+     "psnr": 30.31
+    },
+    {
+     "mode": 1,
+     "color_mode": 0,
+     "strength": 0.75,
+     "psnr": 32.09
+    },
+    {
+     "mode": 1,
+     "color_mode": 0,
+     "strength": 1.0,
+     "psnr": 33.39
+    },
+    {
+     "mode": 1,
+     "color_mode": 0,
+     "strength": 1.5,
+     "psnr": 34.31
+    },
+    {
+     "mode": 1,
+     "color_mode": 0,
+     "strength": 2.0,
+     "psnr": 34.36
+    },
+    {
+     "mode": 1,
+     "color_mode": 0,
+     "strength": 3.0,
+     "psnr": 34.12
+    },
+    {
+     "mode": 1,
+     "color_mode": 0,
+     "strength": 4.0,
+     "psnr": 33.9
+    },
+    {
+     "mode": 0,
+     "color_mode": 1,
+     "strength": 0.5,
+     "psnr": 29.48
+    },
+    {
+     "mode": 0,
+     "color_mode": 1,
+     "strength": 0.75,
+     "psnr": 33.59
+    },
+    {
+     "mode": 0,
+     "color_mode": 1,
+     "strength": 1.0,
+     "psnr": 34.77
+    },
+    {
+     "mode": 0,
+     "color_mode": 1,
+     "strength": 1.5,
+     "psnr": 34.89
+    },
+    {
+     "mode": 0,
+     "color_mode": 1,
+     "strength": 2.0,
+     "psnr": 34.4
+    },
+    {
+     "mode": 0,
+     "color_mode": 1,
+     "strength": 3.0,
+     "psnr": 33.37
+    },
+    {
+     "mode": 0,
+     "color_mode": 1,
+     "strength": 4.0,
+     "psnr": 32.68
+    }
+   ],
+   "denoiseprofile best params": {
+    "mode": 0,
+    "color_mode": 1,
+    "strength": 1.5,
+    "psnr": 34.89
+   },
+   "denoiseprofile": 34.89,
+   "gain denoiseprofile": 9.11,
+   "gain denoiseprofile defaults": 3.34
   },
   {
    "picture": "DSC00578.ARW",
    "camera": "Sony ILCE-6000",
    "iso": 3200.0,
    "psnr_noisy": 32.06,
-   "denoiseprofile": 35.76,
-   "gain denoiseprofile": 3.7,
-   "denoiseprofile 200%": 38.9,
-   "gain denoiseprofile 200%": 6.84,
-   "ai large-multi": 45.39,
-   "gain ai large-multi": 13.33,
-   "ai large-single": 45.29,
-   "gain ai large-single": 13.23,
-   "ai half-multi": 45.38,
-   "gain ai half-multi": 13.32,
-   "ai half-single": 44.89,
-   "gain ai half-single": 12.83
+   "ai large-multi": 45.42,
+   "gain ai large-multi": 13.36,
+   "ai large-single": 45.3,
+   "gain ai large-single": 13.24,
+   "ai half-multi": 45.4,
+   "gain ai half-multi": 13.34,
+   "ai half-single": 44.93,
+   "gain ai half-single": 12.87,
+   "denoiseprofile sweep": [
+    {
+     "mode": 1,
+     "color_mode": 1,
+     "strength": 0.5,
+     "psnr": 34.46
+    },
+    {
+     "mode": 1,
+     "color_mode": 1,
+     "strength": 0.75,
+     "psnr": 35.2
+    },
+    {
+     "mode": 1,
+     "color_mode": 1,
+     "strength": 1.0,
+     "psnr": 35.75
+    },
+    {
+     "mode": 1,
+     "color_mode": 1,
+     "strength": 1.5,
+     "psnr": 37.06
+    },
+    {
+     "mode": 1,
+     "color_mode": 1,
+     "strength": 2.0,
+     "psnr": 38.9
+    },
+    {
+     "mode": 1,
+     "color_mode": 1,
+     "strength": 3.0,
+     "psnr": 42.48
+    },
+    {
+     "mode": 1,
+     "color_mode": 1,
+     "strength": 4.0,
+     "psnr": 44.16
+    },
+    {
+     "mode": 1,
+     "color_mode": 0,
+     "strength": 0.5,
+     "psnr": 38.74
+    },
+    {
+     "mode": 1,
+     "color_mode": 0,
+     "strength": 0.75,
+     "psnr": 41.4
+    },
+    {
+     "mode": 1,
+     "color_mode": 0,
+     "strength": 1.0,
+     "psnr": 43.19
+    },
+    {
+     "mode": 1,
+     "color_mode": 0,
+     "strength": 1.5,
+     "psnr": 44.46
+    },
+    {
+     "mode": 1,
+     "color_mode": 0,
+     "strength": 2.0,
+     "psnr": 44.46
+    },
+    {
+     "mode": 1,
+     "color_mode": 0,
+     "strength": 3.0,
+     "psnr": 44.08
+    },
+    {
+     "mode": 1,
+     "color_mode": 0,
+     "strength": 4.0,
+     "psnr": 43.77
+    },
+    {
+     "mode": 0,
+     "color_mode": 1,
+     "strength": 0.5,
+     "psnr": 40.57
+    },
+    {
+     "mode": 0,
+     "color_mode": 1,
+     "strength": 0.75,
+     "psnr": 42.63
+    },
+    {
+     "mode": 0,
+     "color_mode": 1,
+     "strength": 1.0,
+     "psnr": 43.65
+    },
+    {
+     "mode": 0,
+     "color_mode": 1,
+     "strength": 1.5,
+     "psnr": 44.52
+    },
+    {
+     "mode": 0,
+     "color_mode": 1,
+     "strength": 2.0,
+     "psnr": 44.54
+    },
+    {
+     "mode": 0,
+     "color_mode": 1,
+     "strength": 3.0,
+     "psnr": 44.26
+    },
+    {
+     "mode": 0,
+     "color_mode": 1,
+     "strength": 4.0,
+     "psnr": 44.13
+    }
+   ],
+   "denoiseprofile best params": {
+    "mode": 0,
+    "color_mode": 1,
+    "strength": 2.0,
+    "psnr": 44.54
+   },
+   "denoiseprofile": 44.54,
+   "gain denoiseprofile": 12.48,
+   "gain denoiseprofile defaults": 3.69
   },
   {
    "picture": "DSC00578.ARW",
    "camera": "Sony ILCE-6000",
    "iso": 12800.0,
    "psnr_noisy": 28.01,
-   "denoiseprofile": 31.55,
-   "gain denoiseprofile": 3.54,
-   "denoiseprofile 200%": 34.36,
-   "gain denoiseprofile 200%": 6.35,
-   "ai large-multi": 44.52,
-   "gain ai large-multi": 16.51,
-   "ai large-single": 44.15,
-   "gain ai large-single": 16.14,
-   "ai half-multi": 44.25,
-   "gain ai half-multi": 16.24,
-   "ai half-single": 43.4,
-   "gain ai half-single": 15.39
-  },
-  {
-   "picture": "DSC00578.ARW",
-   "camera": "Sony ILCE-6000",
-   "iso": 51200.0,
-   "psnr_noisy": 24.99,
-   "denoiseprofile": 28.34,
-   "gain denoiseprofile": 3.35,
-   "denoiseprofile 200%": 30.8,
-   "gain denoiseprofile 200%": 5.81,
-   "ai large-multi": 43.37,
-   "gain ai large-multi": 18.38,
-   "ai large-single": 42.67,
-   "gain ai large-single": 17.68,
-   "ai half-multi": 42.79,
-   "gain ai half-multi": 17.8,
-   "ai half-single": 41.69,
-   "gain ai half-single": 16.7
+   "ai large-multi": 44.5,
+   "gain ai large-multi": 16.49,
+   "ai large-single": 44.1,
+   "gain ai large-single": 16.09,
+   "ai half-multi": 44.23,
+   "gain ai half-multi": 16.22,
+   "ai half-single": 43.39,
+   "gain ai half-single": 15.38,
+   "denoiseprofile sweep": [
+    {
+     "mode": 1,
+     "color_mode": 1,
+     "strength": 0.5,
+     "psnr": 30.27
+    },
+    {
+     "mode": 1,
+     "color_mode": 1,
+     "strength": 0.75,
+     "psnr": 30.99
+    },
+    {
+     "mode": 1,
+     "color_mode": 1,
+     "strength": 1.0,
+     "psnr": 31.55
+    },
+    {
+     "mode": 1,
+     "color_mode": 1,
+     "strength": 1.5,
+     "psnr": 32.68
+    },
+    {
+     "mode": 1,
+     "color_mode": 1,
+     "strength": 2.0,
+     "psnr": 34.34
+    },
+    {
+     "mode": 1,
+     "color_mode": 1,
+     "strength": 3.0,
+     "psnr": 38.34
+    },
+    {
+     "mode": 1,
+     "color_mode": 1,
+     "strength": 4.0,
+     "psnr": 41.85
+    },
+    {
+     "mode": 1,
+     "color_mode": 0,
+     "strength": 0.5,
+     "psnr": 33.85
+    },
+    {
+     "mode": 1,
+     "color_mode": 0,
+     "strength": 0.75,
+     "psnr": 36.84
+    },
+    {
+     "mode": 1,
+     "color_mode": 0,
+     "strength": 1.0,
+     "psnr": 39.51
+    },
+    {
+     "mode": 1,
+     "color_mode": 0,
+     "strength": 1.5,
+     "psnr": 42.6
+    },
+    {
+     "mode": 1,
+     "color_mode": 0,
+     "strength": 2.0,
+     "psnr": 43.29
+    },
+    {
+     "mode": 1,
+     "color_mode": 0,
+     "strength": 3.0,
+     "psnr": 42.92
+    },
+    {
+     "mode": 1,
+     "color_mode": 0,
+     "strength": 4.0,
+     "psnr": 42.5
+    },
+    {
+     "mode": 0,
+     "color_mode": 1,
+     "strength": 0.5,
+     "psnr": 35.7
+    },
+    {
+     "mode": 0,
+     "color_mode": 1,
+     "strength": 0.75,
+     "psnr": 39.32
+    },
+    {
+     "mode": 0,
+     "color_mode": 1,
+     "strength": 1.0,
+     "psnr": 40.84
+    },
+    {
+     "mode": 0,
+     "color_mode": 1,
+     "strength": 1.5,
+     "psnr": 42.16
+    },
+    {
+     "mode": 0,
+     "color_mode": 1,
+     "strength": 2.0,
+     "psnr": 42.19
+    },
+    {
+     "mode": 0,
+     "color_mode": 1,
+     "strength": 3.0,
+     "psnr": 41.63
+    },
+    {
+     "mode": 0,
+     "color_mode": 1,
+     "strength": 4.0,
+     "psnr": 41.45
+    }
+   ],
+   "denoiseprofile best params": {
+    "mode": 1,
+    "color_mode": 0,
+    "strength": 2.0,
+    "psnr": 43.29
+   },
+   "denoiseprofile": 43.29,
+   "gain denoiseprofile": 15.28,
+   "gain denoiseprofile defaults": 3.54
   }
  ]
 }

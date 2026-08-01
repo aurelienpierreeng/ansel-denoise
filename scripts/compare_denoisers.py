@@ -56,7 +56,8 @@ BLENDOP = "gz12eJxjYGBgkGAAgRNODESDBnsIHll8ANNSGQM="
 DP_BANDS, DP_CHANNELS = 7, 6
 
 
-def dp_params(a: np.ndarray, b: np.ndarray, strength: float = 1.0) -> bytes:
+def dp_params(a: np.ndarray, b: np.ndarray, strength: float = 1.0,
+              mode: int = 1, color_mode: int = 1) -> bytes:
     """denoiseprofile params blob, replicating init() + reload_defaults():
     the autoset fields are inferred from the profile's green a, the rest are
     the $DEFAULT annotations. Mirrors src/iop/denoiseprofile.c."""
@@ -69,11 +70,12 @@ def dp_params(a: np.ndarray, b: np.ndarray, strength: float = 1.0) -> bytes:
     out = b"".join(struct.pack("<f", v) for v in vals)
     out += b"".join(struct.pack("<f", float(v)) for v in a)
     out += b"".join(struct.pack("<f", float(v)) for v in b)
-    out += struct.pack("<i", 1)  # mode = MODE_WAVELETS
+    out += struct.pack("<i", int(mode))  # 0 NLMEANS, 1 WAVELETS, 4 WAVELETS_AUTO
     for _ in range(DP_CHANNELS):  # x[ch][k] = k / (BANDS - 1)
         out += b"".join(struct.pack("<f", k / (DP_BANDS - 1.0)) for k in range(DP_BANDS))
     out += b"".join(struct.pack("<f", 0.5) for _ in range(DP_CHANNELS * DP_BANDS))
-    out += struct.pack("<iiii", 1, 1, 1, 1)  # wb_adaptive, fix_anscombe, new_vst, Y0U0V0
+    # wb_adaptive, fix_anscombe, new_vst, then RGB(0)/Y0U0V0(1)
+    out += struct.pack("<iiii", 1, 1, 1, int(color_mode))
     return out
 
 
@@ -162,15 +164,17 @@ def main() -> int:
             "moduledir": args.moduledir,
             "env": {"LD_LIBRARY_PATH": str(Path(args.ansel_cli).parents[1]), "LANG": "C",
                     "HOME": str(Path.home()), "PATH": "/usr/bin:/bin"}}
-    # denoiseprofile is measured twice: at its own defaults (what a user gets
-    # by enabling it) and at 200 % strength, which compensates the factor-2
-    # understatement the shipped profiles carry — its fairest showing.
-    variants = [("denoiseprofile", [("denoiseprofile", 11, None)]),
-                ("denoiseprofile 200%", [("denoiseprofile", 11, "strength2")]),
-                ("ai large-multi", [("rawdenoiseai", 1, ai_params(0, 1))]),
-                ("ai large-single", [("rawdenoiseai", 1, ai_params(0, 0))]),
-                ("ai half-multi", [("rawdenoiseai", 1, ai_params(1, 1))]),
-                ("ai half-single", [("rawdenoiseai", 1, ai_params(1, 0))])]
+    # The AI models run at their shipped defaults; denoiseprofile is swept and
+    # only its BEST run per picture+ISO is reported, so the classical module is
+    # compared at its per-image optimum (an oracle a user cannot actually reach
+    # without the clean reference) rather than at whatever its defaults give.
+    ai_variants = [("ai large-multi", ai_params(0, 1)),
+                   ("ai large-single", ai_params(0, 0)),
+                   ("ai half-multi", ai_params(1, 1)),
+                   ("ai half-single", ai_params(1, 0))]
+    dp_grid = [(mode, cmode, st)
+               for mode, cmode in ((1, 1), (1, 0), (0, 1))
+               for st in (0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0)]
 
     results = []
     tmp = Path(tempfile.mkdtemp(prefix="cmpdn-")) if not args.keep else args.keep
@@ -241,19 +245,34 @@ def main() -> int:
             base = render(args.ansel_cli, noisy_dng, ref_xmp, tmp / f"{tag}-noisy.tif", tmp, opts)
             row = {"picture": raw_path.name, "camera": cam.name, "iso": iso,
                    "psnr_noisy": round(psnr(base, ref), 2)}
-            for label, entries in variants:
-                built = [(op, ver,
-                          dp_params(prof.a, prof.b) if blob is None
-                          else (dp_params(prof.a, prof.b, 2.0) if blob == "strength2" else blob),
-                          1) for op, ver, blob in entries]
-                xmp = write_xmp(tmp / f"{tag}-{label.replace(' ', '_')}.xmp", built)
-                img = render(args.ansel_cli, noisy_dng, xmp,
-                             tmp / f"{tag}-{label.replace(' ', '_')}.tif", tmp, opts)
+            for label, blob in ai_variants:
+                slug = label.replace(" ", "_")
+                xmp = write_xmp(tmp / f"{tag}-{slug}.xmp", [("rawdenoiseai", 1, blob, 1)])
+                img = render(args.ansel_cli, noisy_dng, xmp, tmp / f"{tag}-{slug}.tif", tmp, opts)
                 row[label] = round(psnr(img, ref), 2)
                 row[f"gain {label}"] = round(row[label] - row["psnr_noisy"], 2)
+
+            sweep, best = [], None
+            for mode, cmode, st in dp_grid:
+                slug = f"dp_m{mode}_c{cmode}_s{st}"
+                blob = dp_params(prof.a, prof.b, st, mode, cmode)
+                xmp = write_xmp(tmp / f"{tag}-{slug}.xmp", [("denoiseprofile", 11, blob, 1)])
+                img = render(args.ansel_cli, noisy_dng, xmp, tmp / f"{tag}-{slug}.tif", tmp, opts)
+                p_ = round(psnr(img, ref), 2)
+                sweep.append({"mode": mode, "color_mode": cmode, "strength": st, "psnr": p_})
+                if best is None or p_ > best["psnr"]:
+                    best = sweep[-1]
+            row["denoiseprofile sweep"] = sweep
+            row["denoiseprofile best params"] = best
+            row["denoiseprofile"] = best["psnr"]
+            row["gain denoiseprofile"] = round(best["psnr"] - row["psnr_noisy"], 2)
+            defaults = next(x for x in sweep if x["mode"] == 1 and x["color_mode"] == 1
+                            and x["strength"] == 1.0)
+            row["gain denoiseprofile defaults"] = round(defaults["psnr"] - row["psnr_noisy"], 2)
             results.append(row)
             gains = "  ".join(f"{k.replace('gain ', '')} {v:+.2f}"
-                              for k, v in row.items() if k.startswith("gain "))
+                              for k, v in row.items()
+                              if k.startswith("gain ") and isinstance(v, float))
             print(f"{cam.name} ISO {iso:.0f} [{raw_path.stem}]: noisy "
                   f"{row['psnr_noisy']:.2f} dB | {gains}", flush=True)
 
