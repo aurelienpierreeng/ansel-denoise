@@ -1,16 +1,28 @@
 {
  "models": {
+  "denoise-half-multi-v1.anselnn": {
+   "revision": 1,
+   "sha256": "e3e3372d8e8180e7c3e26e3cc996fee213bf2b1cb110c8b1f99d85d810faaf21",
+   "size": 15141401,
+   "updated": "2026-08-01"
+  },
   "denoise-half-single-v1.anselnn": {
-   "revision": 2,
-   "sha256": "4a96188ffc26d8860da225978c0530624f56c64a31ab1895b3033e51e0dc4a6a",
-   "size": 7597369,
-   "updated": "2026-07-29"
+   "revision": 3,
+   "sha256": "fef41fbe4e3388c2c4866234136574d2f27feeab5c071f36954cbc27aa11e27a",
+   "size": 7597397,
+   "updated": "2026-08-01"
+  },
+  "denoise-large-multi-v1.anselnn": {
+   "revision": 1,
+   "sha256": "9e41745b158694e575b48f536f0c761130166d10b3f48fa2b64065b945b47f38",
+   "size": 37899537,
+   "updated": "2026-08-01"
   },
   "denoise-large-single-v1.anselnn": {
-   "revision": 3,
-   "sha256": "412d0086b9e989f64cef310823bf5c2305bf19a8b575a2d8a0be92aa5ca3a310",
-   "size": 30353804,
-   "updated": "2026-07-29"
+   "revision": 4,
+   "sha256": "175c50314ec8565579afd32b0b2d6bea7b459a23ebbd4ca926958f4235e6194f",
+   "size": 30353832,
+   "updated": "2026-08-01"
   }
  }
 }
