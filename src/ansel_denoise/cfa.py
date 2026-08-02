@@ -142,9 +142,18 @@ def fuse_low_bands(pred, noisy, onehot, sigma, scales=(16, 32, 64)):
     M = {s: bin_mosaic_torch(noisy, onehot, s)[0] for s in scales}
     D = {s: bin_mosaic_torch(pred, onehot, s)[0] for s in scales}
     dens = torch.tensor([0.25, 0.5, 0.25], device=pred.device).view(1, 3, 1, 1)
-    s2 = torch.stack([((sigma ** 2) * onehot[:, c:c + 1]).sum()
-                      / onehot[:, c:c + 1].sum().clamp(min=1.0)
-                      for c in range(3)]).view(1, 3, 1, 1)
+    # Per-cell noise variance, binned on the SAME grid as M and D. sigma^2 is
+    # a*x + b, i.e. signal-dependent, so it spans orders of magnitude between
+    # shadow and highlight inside one frame. This used to be a single scalar
+    # per channel (a .sum() over the whole batch), which over-states vn in the
+    # shadows -- struct clamps to zero, w -> 0, the measurement takes cells the
+    # model should own -- and under-states it in the highlights, where w -> 1
+    # hands the model flat cells the dilution floor exists to protect. It also
+    # made the C side's result depend on how the pixelpipe happened to tile,
+    # since a per-tile reduction is a function of which pixels are in the tile.
+    # Var(mean of n same-channel sensels) = mean(sigma^2 over the cell) / n,
+    # so the cell's own mean is the estimator both gates want.
+    V = {s: bin_mosaic_torch(sigma * sigma, onehot, s)[0] for s in scales}
     # BILINEAR upsampling throughout: the fused bands carry measurement
     # noise (sigma/n per block, non-negligible on very noisy images) and
     # nearest upsampling turns it into visible checkers of colored squares;
@@ -174,7 +183,7 @@ def fuse_low_bands(pred, noisy, onehot, sigma, scales=(16, 32, 64)):
     # REQUIRES a model trained with the DC-ownership loss (loss on the
     # unfused output): models from the older fused loss drift in deep
     # shadows and must not be used with this code.
-    vn_S = s2 / (dens * S * S)
+    vn_S = V[S] / (dens * S * S)
     mloc = M[S] - blur(M[S])
     struct_S = (blur(mloc * mloc) - T * vn_S).clamp(min=0.0)
     w_S = struct_S / (struct_S + vn_S + 1e-20)
@@ -182,7 +191,11 @@ def fuse_low_bands(pred, noisy, onehot, sigma, scales=(16, 32, 64)):
     for s in reversed(scales[:-1]):
         band_d = D[s] - up(D[2 * s])
         band_m = M[s] - up(M[2 * s])
-        vn = s2 * (1.0 / (dens * s * s) - 1.0 / (dens * 4 * s * s))
+        # Var(mean_s - up(mean_2s)) = Var(mean_s) * 3/4 once the covariance
+        # between a cell and the 2x2 parent it belongs to is accounted for --
+        # which is exactly what this difference of the two reciprocals is. The
+        # scale-s cell mean is therefore the right sigma^2 for the whole term.
+        vn = V[s] * (1.0 / (dens * s * s) - 1.0 / (dens * 4 * s * s))
         vm = (blur((band_d - band_m) ** 2) - T * vn).clamp(min=0.0)
         w = vn / (vn + vm + 1e-20)  # ->1 flat (model band), ->1 nowhere harmful
         fused = up(fused) + w * band_d + (1 - w) * band_m
