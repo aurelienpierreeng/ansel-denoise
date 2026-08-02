@@ -9,7 +9,7 @@
 #   ./scripts/bench_runtime.sh <raw-file> [options]
 #     --ansel-cli PATH   ansel-cli binary   (default: /opt/ansel/bin/ansel-cli — see below)
 #     --datadir DIR      Ansel data dir     (default: /opt/ansel/share/ansel)
-#     --moduledir DIR    IOP plugins        (default: <prefix>/lib/ansel/plugins)
+#     --moduledir DIR    module base dir    (default: <prefix>/lib{64}/ansel)
 #     --repeat N         timed runs kept per configuration, min wins (default 3)
 #     --crop N           time on an N x N sensor crop instead of the whole raw
 #     --out FILE         results            (default: bench/runtime.json)
@@ -56,11 +56,14 @@ done
 [ -x "$ANSEL_CLI" ] || { echo "no ansel-cli at $ANSEL_CLI (pass --ansel-cli)" >&2; exit 1; }
 [ -d "$DATADIR" ] || { echo "no datadir at $DATADIR (pass --datadir)" >&2; exit 1; }
 if [ -z "$MODULEDIR" ]; then
-    # <prefix>/bin/ansel-cli -> <prefix>/lib{64}/ansel/plugins; which of the
-    # two exists is distribution policy (Fedora and openSUSE use lib64)
+    # --moduledir is the BASE directory: Ansel appends /plugins/... to it
+    # itself, so it must be <prefix>/lib{64}/ansel, NOT the plugins directory
+    # (pointing at plugins/ makes it search plugins/plugins/, find no IOP and
+    # abort with "can't init develop system"). lib vs lib64 is distribution
+    # policy — Fedora and openSUSE use lib64.
     PREFIX="$(dirname "$(dirname "$ANSEL_CLI")")"
-    for d in "$PREFIX/lib64/ansel/plugins" "$PREFIX/lib/ansel/plugins"; do
-        if [ -f "$d/librawdenoiseai.so" ]; then MODULEDIR="$d"; break; fi
+    for d in "$PREFIX/lib64/ansel" "$PREFIX/lib/ansel"; do
+        if [ -f "$d/plugins/librawdenoiseai.so" ]; then MODULEDIR="$d"; break; fi
     done
     [ -n "$MODULEDIR" ] || {
         echo "could not find the IOP plugins under $PREFIX/lib64 or $PREFIX/lib" >&2
@@ -68,7 +71,7 @@ if [ -z "$MODULEDIR" ]; then
         exit 1
     }
 fi
-[ -d "$MODULEDIR" ] || { echo "no moduledir at $MODULEDIR (pass --moduledir)" >&2; exit 1; }
+[ -d "$MODULEDIR/plugins" ] || { echo "no plugins under $MODULEDIR (pass --moduledir)" >&2; exit 1; }
 
 PY="${PYTHON:-python3.12}"
 WORK=$(mktemp -d)

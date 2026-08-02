@@ -83,7 +83,9 @@ def time_render(cli: str, raw: Path, xmp: Path, work: Path, opts: dict, gpu: boo
            "--configdir", opts["configdir"], "--library", str(db),
            "--moduledir", opts["moduledir"], "--datadir", opts["datadir"]]
     if not gpu:
-        cmd.insert(4, "--disable-opencl")
+        # everything after --core is a core option; inserted before it,
+        # ansel-cli rejects it as an unknown option of its own
+        cmd.append("--disable-opencl")
     r = subprocess.run(cmd, capture_output=True, text=True, env=opts["env"], check=False)
     if not out.exists():
         raise SystemExit(f"render failed:\n{r.stdout[-1500:]}\n{r.stderr[-1500:]}")
