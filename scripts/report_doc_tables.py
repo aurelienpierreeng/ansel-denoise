@@ -21,7 +21,10 @@ from pathlib import Path
 import numpy as np
 
 REPO = Path(__file__).resolve().parents[1]
-MATRIX = [("large", "single"), ("large", "multi"), ("half", "single"), ("half", "multi")]
+# the shipped generation; bump this prefix when a new matrix supersedes it, so
+# the published tables are always re-derived from the models actually shipping
+BENCH_PREFIX = "m200"
+MATRIX = [(s, v) for s in ("large", "half", "quarter") for v in ("single", "multi")]
 
 
 def _tiles(path: Path, hi_only: bool = False):
@@ -42,24 +45,24 @@ def main() -> int:
         print("| --- | --- | --- |")
         cells = {}
         for size, variant in MATRIX:
-            f = args.bench / f"m760-{size}-{variant}.json"
+            f = args.bench / f"{BENCH_PREFIX}-{size}-{variant}.json"
             if not f.exists():
                 cells[(size, variant)] = None
                 continue
             rows = _tiles(f, hi)
             cells[(size, variant)] = np.mean([r["psnr"] - r["psnr_noisy"] for r in rows])
-        for size in ("large", "half"):
+        for size in ("large", "half", "quarter"):
             vals = [cells[(size, v)] for v in ("single", "multi")]
             print(f"| {size} | " + " | ".join(
                 f"{v:+.1f}" if v is not None else "*(in training)*" for v in vals) + " |")
-        print("| quarter | *(in training)* | *(in training)* |\n")
+        print()
 
     print("## Chroma advantage of multiscale (LFCE at bin 16, lower is better)\n")
     for label, hi in (("all ISO", False), ("ISO > 12000", True)):
-        for size in ("large", "half"):
+        for size in ("large", "half", "quarter"):
             got = {}
             for variant in ("single", "multi"):
-                f = args.bench / f"m760-{size}-{variant}.json"
+                f = args.bench / f"{BENCH_PREFIX}-{size}-{variant}.json"
                 if f.exists():
                     got[variant] = np.mean([r["lfce_16"] for r in _tiles(f, hi)])
             if len(got) == 2:
