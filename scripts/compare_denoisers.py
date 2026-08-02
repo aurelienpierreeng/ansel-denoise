@@ -171,7 +171,9 @@ def main() -> int:
     ai_variants = [("ai large-multi", ai_params(0, 1)),
                    ("ai large-single", ai_params(0, 0)),
                    ("ai half-multi", ai_params(1, 1)),
-                   ("ai half-single", ai_params(1, 0))]
+                   ("ai half-single", ai_params(1, 0)),
+                   ("ai quarter-multi", ai_params(2, 1)),
+                   ("ai quarter-single", ai_params(2, 0))]
     dp_grid = [(mode, cmode, st)
                for mode, cmode in ((1, 1), (1, 0), (0, 1))
                for st in (0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0)]
