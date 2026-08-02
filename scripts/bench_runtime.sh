@@ -56,8 +56,17 @@ done
 [ -x "$ANSEL_CLI" ] || { echo "no ansel-cli at $ANSEL_CLI (pass --ansel-cli)" >&2; exit 1; }
 [ -d "$DATADIR" ] || { echo "no datadir at $DATADIR (pass --datadir)" >&2; exit 1; }
 if [ -z "$MODULEDIR" ]; then
-    # <prefix>/bin/ansel-cli -> <prefix>/lib/ansel/plugins
-    MODULEDIR="$(dirname "$(dirname "$ANSEL_CLI")")/lib/ansel/plugins"
+    # <prefix>/bin/ansel-cli -> <prefix>/lib{64}/ansel/plugins; which of the
+    # two exists is distribution policy (Fedora and openSUSE use lib64)
+    PREFIX="$(dirname "$(dirname "$ANSEL_CLI")")"
+    for d in "$PREFIX/lib64/ansel/plugins" "$PREFIX/lib/ansel/plugins"; do
+        if [ -f "$d/librawdenoiseai.so" ]; then MODULEDIR="$d"; break; fi
+    done
+    [ -n "$MODULEDIR" ] || {
+        echo "could not find the IOP plugins under $PREFIX/lib64 or $PREFIX/lib" >&2
+        echo "(did you 'sudo ninja install'? otherwise pass --moduledir)" >&2
+        exit 1
+    }
 fi
 [ -d "$MODULEDIR" ] || { echo "no moduledir at $MODULEDIR (pass --moduledir)" >&2; exit 1; }
 
