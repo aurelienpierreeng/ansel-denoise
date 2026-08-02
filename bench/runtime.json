@@ -1,0 +1,164 @@
+{
+ "raw": "/home/aurelienpierre/Images/Test raws/DSC00578.ARW",
+ "repeat": 3,
+ "results": {
+  "cpu": {
+   "ai large-single": {
+    "secs": 113.364,
+    "runs": [
+     113.364,
+     115.683,
+     116.836
+    ],
+    "device": "CPU",
+    "notes": "with tiling, blended on CPU",
+    "relative": 3.48
+   },
+   "ai large-multi": {
+    "secs": 126.834,
+    "runs": [
+     126.968,
+     126.858,
+     126.834
+    ],
+    "device": "CPU",
+    "notes": "with tiling, blended on CPU",
+    "relative": 3.9
+   },
+   "ai half-single": {
+    "secs": 32.546,
+    "runs": [
+     33.159,
+     32.546,
+     32.861
+    ],
+    "device": "CPU",
+    "notes": ", blended on CPU",
+    "relative": 1.0
+   },
+   "ai half-multi": {
+    "secs": 38.591,
+    "runs": [
+     39.029,
+     38.591,
+     39.04
+    ],
+    "device": "CPU",
+    "notes": ", blended on CPU",
+    "relative": 1.19
+   },
+   "denoiseprofile non-local means (swept optimum)": {
+    "secs": 15.268,
+    "runs": [
+     15.664,
+     15.345,
+     15.268
+    ],
+    "device": "CPU",
+    "notes": ", blended on CPU",
+    "relative": 0.47
+   },
+   "denoiseprofile wavelets (swept optimum)": {
+    "secs": 4.124,
+    "runs": [
+     4.15,
+     4.124,
+     4.135
+    ],
+    "device": "CPU",
+    "notes": ", blended on CPU",
+    "relative": 0.13
+   },
+   "denoiseprofile wavelets (defaults)": {
+    "secs": 4.154,
+    "runs": [
+     4.17,
+     4.154,
+     4.165
+    ],
+    "device": "CPU",
+    "notes": ", blended on CPU",
+    "relative": 0.13
+   }
+  },
+  "gpu": {
+   "ai large-single": {
+    "secs": 33.622,
+    "runs": [
+     33.648,
+     33.622,
+     33.651
+    ],
+    "device": "GPU",
+    "notes": "with tiling, blended on CPU",
+    "relative": 3.82
+   },
+   "ai large-multi": {
+    "secs": 43.998,
+    "runs": [
+     44.034,
+     43.998,
+     44.041
+    ],
+    "device": "GPU",
+    "notes": "with tiling, blended on CPU",
+    "relative": 4.99
+   },
+   "ai half-single": {
+    "secs": 8.813,
+    "runs": [
+     8.814,
+     8.817,
+     8.813
+    ],
+    "device": "GPU",
+    "notes": "with tiling, blended on CPU",
+    "relative": 1.0
+   },
+   "ai half-multi": {
+    "secs": 12.18,
+    "runs": [
+     12.188,
+     12.18,
+     12.212
+    ],
+    "device": "GPU",
+    "notes": "with tiling, blended on CPU",
+    "relative": 1.38
+   },
+   "denoiseprofile non-local means (swept optimum)": {
+    "secs": 8.262,
+    "runs": [
+     8.262,
+     8.263,
+     8.269
+    ],
+    "device": "GPU",
+    "notes": ", blended on GPU",
+    "relative": 0.94
+   },
+   "denoiseprofile wavelets (swept optimum)": {
+    "secs": 1.682,
+    "runs": [
+     1.686,
+     1.682,
+     1.682
+    ],
+    "device": "GPU",
+    "notes": "with tiling, blended on CPU",
+    "relative": 0.19
+   },
+   "denoiseprofile wavelets (defaults)": {
+    "secs": 1.687,
+    "runs": [
+     1.69,
+     1.693,
+     1.687
+    ],
+    "device": "GPU",
+    "notes": "with tiling, blended on CPU",
+    "relative": 0.19
+   }
+  }
+ }
+}

@@ -1,0 +1,41 @@
+seeded config from /home/aurelienpierre/.config/ansel/anselrc
+raw:       /home/aurelienpierre/Images/Test raws/DSC00578.ARW
+ansel-cli: /opt/ansel/bin/ansel-cli
+datadir:   /opt/ansel/share/ansel
+moduledir: /opt/ansel/lib64/ansel
+models:    4 in the isolated config dir
+repeat:    3   crop: 0
+
+=== CPU ===
+  ai large-single                  113.364 s  on CPU with tiling, blended on CPU  (113.364, 115.683, 116.836)
+  ai large-multi                   126.834 s  on CPU with tiling, blended on CPU  (126.968, 126.858, 126.834)
+  ai half-single                    32.546 s  on CPU , blended on CPU  (33.159, 32.546, 32.861)
+  ai half-multi                     38.591 s  on CPU , blended on CPU  (39.029, 38.591, 39.040)
+  denoiseprofile non-local means (swept optimum)  15.268 s  on CPU , blended on CPU  (15.664, 15.345, 15.268)
+  denoiseprofile wavelets (swept optimum)   4.124 s  on CPU , blended on CPU  (4.150, 4.124, 4.135)
+  denoiseprofile wavelets (defaults)   4.154 s  on CPU , blended on CPU  (4.170, 4.154, 4.165)
+  -- relative, x1 = ai half-single (32.546 s) --
+  ai large-single                  x3.48
+  ai large-multi                   x3.90
+  ai half-single                   x1.00
+  ai half-multi                    x1.19
+  denoiseprofile non-local means (swept optimum) x0.47
+  denoiseprofile wavelets (swept optimum) x0.13
+  denoiseprofile wavelets (defaults) x0.13
+=== GPU ===
+  ai large-single                   33.622 s  on GPU with tiling, blended on CPU  (33.648, 33.622, 33.651)
+  ai large-multi                    43.998 s  on GPU with tiling, blended on CPU  (44.034, 43.998, 44.041)
+  ai half-single                     8.813 s  on GPU with tiling, blended on CPU  (8.814, 8.817, 8.813)
+  ai half-multi                     12.180 s  on GPU with tiling, blended on CPU  (12.188, 12.180, 12.212)
+  denoiseprofile non-local means (swept optimum)   8.262 s  on GPU , blended on GPU  (8.262, 8.263, 8.269)
+  denoiseprofile wavelets (swept optimum)   1.682 s  on GPU with tiling, blended on CPU  (1.686, 1.682, 1.682)
+  denoiseprofile wavelets (defaults)   1.687 s  on GPU with tiling, blended on CPU  (1.690, 1.693, 1.687)
+  -- relative, x1 = ai half-single (8.813 s) --
+  ai large-single                  x3.82
+  ai large-multi                   x4.99
+  ai half-single                   x1.00
+  ai half-multi                    x1.38
+  denoiseprofile non-local means (swept optimum) x0.94
+  denoiseprofile wavelets (swept optimum) x0.19
+  denoiseprofile wavelets (defaults) x0.19
+wrote bench/runtime.json

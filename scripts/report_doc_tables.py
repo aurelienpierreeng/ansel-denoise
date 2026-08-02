@@ -8,6 +8,7 @@ Chain of custody for each table in
   model quality      speckle_bench.py  -> bench/m760-<size>-<variant>.json
   chroma (LFCE)      same files (lfce_16 column)
   vs denoiseprofile  compare_denoisers.py -> bench/vs-denoiseprofile.json
+  processing cost    bench_runtime.py     -> bench/runtime.json
 
 Usage: python3.12 scripts/report_doc_tables.py [--bench bench]
 """
@@ -92,6 +93,28 @@ def main() -> int:
         n_grid = len(res[0]["denoiseprofile sweep"])
         print(f"\n  sweep size: {n_grid} settings per picture and ISO, "
               f"{n_grid * len(res)} renders total")
+
+    rt = args.bench / "runtime.json"
+    if rt.exists():
+        data = json.loads(rt.read_text())
+        res = data["results"]
+        rows = list(res["cpu"].keys())
+        print(f"\n## Processing cost ({Path(data['raw']).name}, "
+              f"min of {data['repeat']} runs)\n")
+        print("| relative cost | CPU | GPU |")
+        print("| --- | --- | --- |")
+        for k in rows:
+            cells = []
+            for dev in ("cpu", "gpu"):
+                v = res[dev].get(k)
+                ref = res[dev]["ai half-single"]["secs"]
+                cells.append(f"x{v['secs'] / ref:.2g}" if v else "n/a")
+            print(f"| {k} | " + " | ".join(cells) + " |")
+        print("\n  absolute seconds and the device each module reported:")
+        for dev in ("cpu", "gpu"):
+            for k, v in res[dev].items():
+                flag = "  <-- OpenCL did NOT engage" if dev == "gpu" and v["device"] == "CPU" else ""
+                print(f"    {dev} {k:<46} {v['secs']:7.2f} s  [{v['device']}]{flag}")
     return 0
 
 
