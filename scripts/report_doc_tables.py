@@ -108,7 +108,10 @@ def main() -> int:
             for dev in ("cpu", "gpu"):
                 v = res[dev].get(k)
                 ref = res[dev]["ai half-single"]["secs"]
-                cells.append(f"x{v['secs'] / ref:.2g}" if v else "n/a")
+                # a row measured in a separate session carries a rescaled
+                # figure, normalised through the shared half-single reference
+                secs = v.get("secs_rescaled", v["secs"]) if v else None
+                cells.append(f"x{secs / ref:.2g}" if v else "n/a")
             print(f"| {k} | " + " | ".join(cells) + " |")
         print("\n  absolute seconds and the device each module reported:")
         for dev in ("cpu", "gpu"):

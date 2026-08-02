@@ -12,6 +12,8 @@
 #     --moduledir DIR    module base dir    (default: <prefix>/lib{64}/ansel)
 #     --repeat N         timed runs kept per configuration, min wins (default 3)
 #     --crop N           time on an N x N sensor crop instead of the whole raw
+#     --only SUBSTR      time only matching configurations (the half single-scale
+#                        reference is always included: it is the x1 baseline)
 #     --out FILE         results            (default: bench/runtime.json)
 #
 # Expect roughly 1.5-3 h on a full 24 MP raw with --repeat 3: 7 configurations
@@ -39,6 +41,7 @@ DATADIR="/opt/ansel/share/ansel"   # must match the ansel-cli you use
 MODULEDIR=""
 REPEAT=3
 CROP=0
+ONLY=""
 OUT="bench/runtime.json"
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -47,6 +50,7 @@ while [ $# -gt 0 ]; do
         --moduledir) MODULEDIR="$2"; shift 2 ;;
         --repeat)    REPEAT="$2"; shift 2 ;;
         --crop)      CROP="$2"; shift 2 ;;
+        --only)      ONLY="$2"; shift 2 ;;
         --out)       OUT="$2"; shift 2 ;;
         *) echo "unknown option: $1" >&2; exit 1 ;;
     esac
@@ -118,4 +122,5 @@ exec "$PY" -u scripts/bench_runtime.py \
     --moduledir "$MODULEDIR" \
     --repeat "$REPEAT" \
     --crop "$CROP" \
+    ${ONLY:+--only $ONLY} \
     --out "$OUT"

@@ -1,0 +1,70 @@
+{
+ "raw": "/home/aurelienpierre/Images/Test raws/DSC00578.ARW",
+ "repeat": 2,
+ "results": {
+  "cpu": {
+   "ai half-single": {
+    "secs": 33.363,
+    "runs": [
+     33.363,
+     33.699
+    ],
+    "device": "CPU",
+    "notes": ", blended on CPU",
+    "relative": 1.0
+   },
+   "ai quarter-single": {
+    "secs": 11.316,
+    "runs": [
+     11.316,
+     11.477
+    ],
+    "device": "CPU",
+    "notes": ", blended on CPU",
+    "relative": 0.34
+   },
+   "ai quarter-multi": {
+    "secs": 17.426,
+    "runs": [
+     21.154,
+     17.426
+    ],
+    "device": "CPU",
+    "notes": ", blended on CPU",
+    "relative": 0.52
+   }
+  },
+  "gpu": {
+   "ai half-single": {
+    "secs": 8.818,
+    "runs": [
+     8.824,
+     8.818
+    ],
+    "device": "GPU",
+    "notes": "with tiling, blended on CPU",
+    "relative": 1.0
+   },
+   "ai quarter-single": {
+    "secs": 2.551,
+    "runs": [
+     2.551,
+     2.563
+    ],
+    "device": "GPU",
+    "notes": "with tiling, blended on CPU",
+    "relative": 0.29
+   },
+   "ai quarter-multi": {
+    "secs": 4.478,
+    "runs": [
+     4.483,
+     4.478
+    ],
+    "device": "GPU",
+    "notes": "with tiling, blended on CPU",
+    "relative": 0.51
+   }
+  }
+ }
+}

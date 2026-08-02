@@ -53,6 +53,8 @@ CONFIGS = [
     ("ai large-multi", [("rawdenoiseai", 1, ai_params(0, 1), 1)]),
     ("ai half-single", [("rawdenoiseai", 1, ai_params(1, 0), 1)]),
     ("ai half-multi", [("rawdenoiseai", 1, ai_params(1, 1), 1)]),
+    ("ai quarter-single", [("rawdenoiseai", 1, ai_params(2, 0), 1)]),
+    ("ai quarter-multi", [("rawdenoiseai", 1, ai_params(2, 1), 1)]),
     # the sweep's optima: non-local means/Y0U0V0 won 5 of 6 conditions,
     # wavelets/RGB won the remaining one; strength 200 % for this camera
     ("denoiseprofile non-local means (swept optimum)",
@@ -150,6 +152,10 @@ def main() -> int:
                          "families proportionally; shrinking the EXPORT would not, because "
                          "rawdenoiseai runs before demosaic and always at full sensor "
                          "resolution while denoiseprofile runs after it.")
+    ap.add_argument("--only", nargs="+", default=None,
+                    help="time only these configurations (substring match). The "
+                         "half single-scale reference is always included, since "
+                         "every relative cost is expressed against it.")
     ap.add_argument("--out", type=Path)
     args = ap.parse_args()
 
@@ -169,6 +175,9 @@ def main() -> int:
         rows = {}
         for label, entries in CONFIGS:
             if label == "off":
+                continue
+            if args.only and label != "ai half-single" \
+               and not any(o in label for o in args.only):
                 continue
             xmp = write_xmp(work / f"{label.replace(' ', '_')}.xmp", entries)
             time_render(args.ansel_cli, raw, xmp, work, opts, gpu)  # warm-up

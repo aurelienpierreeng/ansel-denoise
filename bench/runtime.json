@@ -79,6 +79,30 @@
     "device": "CPU",
     "notes": ", blended on CPU",
     "relative": 0.13
+   },
+   "ai quarter-single": {
+    "secs": 11.316,
+    "runs": [
+     11.316,
+     11.477
+    ],
+    "device": "CPU",
+    "notes": ", blended on CPU",
+    "relative": 0.34,
+    "secs_rescaled": 11.038891466594732,
+    "note": "measured in a separate session; rescaled via the shared half-single reference (33.36s there vs 32.55s here)"
+   },
+   "ai quarter-multi": {
+    "secs": 17.426,
+    "runs": [
+     21.154,
+     17.426
+    ],
+    "device": "CPU",
+    "notes": ", blended on CPU",
+    "relative": 0.52,
+    "secs_rescaled": 16.999268531007402,
+    "note": "measured in a separate session; rescaled via the shared half-single reference (33.36s there vs 32.55s here)"
    }
   },
   "gpu": {
@@ -158,6 +182,30 @@
     "device": "GPU",
     "notes": "with tiling, blended on CPU",
     "relative": 0.19
+   },
+   "ai quarter-single": {
+    "secs": 2.551,
+    "runs": [
+     2.551,
+     2.563
+    ],
+    "device": "GPU",
+    "notes": "with tiling, blended on CPU",
+    "relative": 0.29,
+    "secs_rescaled": 2.5495535268768434,
+    "note": "measured in a separate session; rescaled via the shared half-single reference (8.82s there vs 8.81s here)"
+   },
+   "ai quarter-multi": {
+    "secs": 4.478,
+    "runs": [
+     4.483,
+     4.478
+    ],
+    "device": "GPU",
+    "notes": "with tiling, blended on CPU",
+    "relative": 0.51,
+    "secs_rescaled": 4.475460875481969,
+    "note": "measured in a separate session; rescaled via the shared half-single reference (8.82s there vs 8.81s here)"
    }
   }
  }
